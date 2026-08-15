@@ -3189,5 +3189,111 @@ stats count(*) by @message
 
 **Analogy:** CloudWatch = **Hospital ICU monitor** — har patient (server) ka ECG ya CPU, heart rate (alarms), aur nurses logs (log files) sab kuch ek monitor pe. Alarm = **Emergency buzzer** — heart rate zyada hua to nurse ko call. Dashboards = **ICU room display** — doctor ko sab ICU stats ek jagah milta hai.
 
+## CloudTrail (Audit & Security)
+
+CloudTrail AWS ki **audit logging** service hai — jo aapke AWS account me **har API call** (jo koi bhi aapke account me karta hai) ko record karti hai. Ek tarah se **CCTV footage of AWS** — "kaun, kab, kya kiya, kahan se" — security, compliance aur troubleshooting ke liye.
+
+**Example — "Mere S3 bucket kya koi delete kiya?"**
+1. Koi hacker (ya employee) S3 bucket delete kar deta hai
+2. Aap **CloudTrail** kholte ho → us S3 bucket ke events search karte ho
+3. Milta hai: `DeleteBucket` event — **kaun IAM user**, **kis IP se**, **kab** (timestamp)
+4. Ye event **CloudWatch Logs** me bhi ja sakta hai → alarm trigger — "delete hua!"
+5. **Security team** incidents investigate karti hai — proof ke saath
+
+**CloudTrail kya record karta hai?**
+- **Management events** (default, free) — console/login, IAM changes, bucket created/deleted, config changes
+  - **Read** events — jo cheeze dekhna (list, get)
+  - **Write** events — jo badalna (create, delete, update)
+- **Data events** (extra cost) — S3 object-level (GetObject, DeleteObject), Lambda invocations
+- **Insight events** — unusual activity detection (API call unusual patterns)
+
+**CloudTrail components:**
+
+| Concept | Kya hai |
+|---------|---------|
+| **Trail** | Logging configuration — kya log karna hai, kahan store karna hai |
+| **Event history** | Last 90 days ka log — console se visible (free, searchable) |
+| **S3 delivery** | Events S3 bucket me durable store (JSON) — long-term retention |
+| **CloudWatch Logs** | Events CloudWatch Logs me → alarms/monitoring |
+| **Multi-region trail** | Saare regions ki activity ek jagah |
+| **Organization trail** | Poori AWS Organization ki activity ek trail me |
+
+**Trail types:**
+
+| Type | Scope | Use Case |
+|------|-------|----------|
+| **Management events** | Console/sign-in, IAM, resource changes | Default security audit |
+| **Data events** | S3 objects, Lambda calls | High-volume — object tracking |
+| **Insight events** | Abnormal API usage | Anomaly detection |
+
+**CloudTrail vs CloudWatch:**
+
+| Feature | CloudTrail | CloudWatch |
+|---------|-----------|------------|
+| Purpose | **Audit** — kaun kya kiya (API activity) | **Monitoring** — system health (metrics) |
+| Records | API calls, user actions | Metrics, logs, alarms |
+| Who | IAM actions, events | Infra health |
+| When | Security/compliance | Ops/performance |
+| Data | JSON event files (S3) | Logs + metrics |
+
+- **CloudTrail:** "S3 bucket kholne ka kaun aaya" — security
+- **CloudWatch:** "Mera server slow kyu" — operations
+
+**Setup steps:**
+
+1. **Trail banao** — Console → CloudTrail → "Create trail"
+   - Name + **S3 bucket** (events kahan jayenge)
+   - "Apply to all regions" ON karo (multi-region)
+2. **Event types select karo** — Management (default ON), Data events (ON karo for S3/Lambda)
+3. **CloudWatch Logs** attach karo (alarms ke liye)
+4. **Insight events** enable karo (default 90 days history)
+5. Events JSON me S3 pe store hote hain:
+
+```json
+{
+  "eventVersion": "1.08",
+  "userIdentity": {
+    "type": "IAMUser",
+    "userName": "abdullah",
+    "accessKeyId": "AKIA..."
+  },
+  "eventTime": "2026-08-15T14:32:10Z",
+  "eventSource": "s3.amazonaws.com",
+  "eventName": "DeleteBucket",
+  "awsRegion": "us-east-1",
+  "sourceIPAddress": "182.x.x.x",
+  "userAgent": "console.amazonaws.com",
+  "requestParameters": { "bucketName": "my-important-bucket" },
+  "responseElements": null
+}
+```
+
+**Search & queries:**
+```bash
+# CLI se events dhundna
+aws cloudtrail lookup-events --lookup-attributes \
+  AttributeKey=EventName,AttributeValue=DeleteBucket \
+  --max-results 10
+
+# S3 me stored events (Athena se query karo!) 
+# CloudTrail → S3 → Athena table banao → SQL:
+SELECT eventname, useridentity.username, eventtime, sourceipaddress
+FROM cloudtrail_logs
+WHERE eventname LIKE '%Delete%'
+ORDER BY eventtime DESC;
+```
+
+**Important points:**
+- **Free:** Management events — **90 days Event History** (console pe browse)
+- **Cost:** S3 storage + CloudWatch Logs + Data events (per 100k events)
+- **Default ON** — management events saare accounts me log hoti hain (90 days)
+- **Durable storage** — S3 me trail set karo, warna 90 din baad history expire
+- **Security best practice:** trail logs ko bhi protect karo (S3 bucket policies, MFA delete)
+- **KMS encryption** — cloudtrail logs encrypt karna
+- CloudTrail + CloudWatch + Athena = complete audit pipeline
+- **Organization trail** — multiple accounts ek jagah audit
+
+**Analogy:** CloudTrail = **Office CCTV + register book** — har kisi ka entry/exit (API call) recorded hota hai: kaun office aaya (IAM user), kab, kya kiya (eventName). Kuch bhi miss nahi hota — agar koi galti kare to pehle CCTV check karo. Security team kisi bhi suspicious activity ko usi register se investigate karti hai.
+
 
 
