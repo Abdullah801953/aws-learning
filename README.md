@@ -63,6 +63,7 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 | **Redshift** | Petabyte-scale data warehouse — fast columnar SQL analytics |
 | **QuickSight** | Cloud BI — interactive dashboards & reports (Athena/Redshift native) |
 | **Kinesis** | Real-time data streaming — Data Streams, Firehose, Analytics |
+| **CloudWatch** | Monitoring & observability — metrics, alarms, logs, dashboards |
 
 ### 🤖 AI / Machine Learning
 | Service | What it does |

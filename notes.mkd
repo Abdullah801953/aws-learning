@@ -3052,5 +3052,142 @@ Streaming data → Firehose (buffer 60s/128MB) → S3 (Parquet/JSON) → Athena/
 
 **Analogy:** Kinesis = **Amazon's conveyor belt** — 24x7 data calatay rehta hai. Data Streams = **Belt** — saman belt par chalta hai (records on shards), workers (consumers) belt se utthate hain; agar koi miss ho gaya to 24h tak belt fix se milega (replay). Firehose = **Boxing station** — belt se data uthakar box (S3/Redshift) me pack karta hai. Data Analytics = **Live CCTV operator** — belt par basi cheez se turant report/alert banata hai.
 
+## CloudWatch (Monitoring & Logging)
+
+CloudWatch AWS ki **monitoring and observability** service hai — jo aapke AWS resources (EC2, Lambda, S3, databases) ka **health, performance aur logs** track karta hai. Ye 3 main cheezein karta hai: **Metrics** (numbers), **Alarms** (alerts), **Logs** (text logs) — aur un sab pe **dashboards** deta hai.
+
+**Example — Amazon ka EC2 server monitor:**
+Amazon ka ek web server EC2 pe chalta hai:
+1. **CloudWatch Metric** har 1 min me collect karta hai: CPU %, memory, disk, network
+2. **Alarm** set hai: "CPU > 80% for 5 min" → **SNS** se team ko email
+3. Agar alarm hua → team turant response deti hai (ya Auto Scaling instance badha deta hai)
+4. **Logs** — app ki logs (errors, requests) CloudWatch Logs me jaati hain
+5. **Dashboard** — sab kuch ek screen pe live
+
+**CloudWatch ka pura ecosystem (components):**
+
+| Component | Kya karta hai |
+|-----------|---------------|
+| **Metrics** | Numeric data (CPU, latency, errors) — services auto-report karti hain |
+| **Alarms** | Metric threshold cross → action (SNS email, Auto Scaling, Lambda) |
+| **Logs** | App/system logs collect karta hai — searchable, S3 export |
+| **Log Insights** | SQL-like queries logs pe — errors dhundna |
+| **Dashboards** | Metrics + logs ek visual screen pe |
+| **Events / EventBridge** | Resource change pe events → triggers |
+| **Synthetics** | Canaries — health checks (URLs pe traffic bhejta hai) |
+| **X-Ray (separate)** | Distributed tracing — request paths |
+
+**1. CloudWatch Metrics:**
+- **Automatic** — EC2, Lambda, RDS, ALB, S3... sab basic metrics bhejte hain (free)
+- **Custom metrics** — apne app ke metrics bhejo (SDK/CLI)
+- **Resolution:** Standard (1 min) | Detailed (1 sec, extra cost)
+- Example metrics:
+  - **EC2:** CPUUtilization, NetworkIn/Out, DiskRead/Write
+  - **Lambda:** Invocations, Duration, Errors, Throttles
+  - **ALB:** HealthyHostCount, RequestCount, TargetResponseTime
+
+```bash
+# Custom metric bhejna (example)
+aws cloudwatch put-metric-data --namespace "MyApp" \
+  --metric-name "OrderProcessingTime" --value 1.24 --unit Seconds
+```
+
+**2. CloudWatch Alarms:**
+- Threshold + period set karo: "CPU > 85% for 3 consecutive periods"
+- States: **OK → ALARM → INSUFFICIENT_DATA**
+- Actions:
+  - **SNS** — email/SMS/Slack (notification)
+  - **Auto Scaling** — instances add/remove
+  - **EC2 action** — stop/reboot/terminate
+- Costs: $0.10/alarm/month — har metric alarm pe
+
+```json
+// Alarm example: Lambda errors
+{
+  "MetricName": "Errors",
+  "Namespace": "AWS/Lambda",
+  "Statistic": "Sum",
+  "Period": 60,
+  "EvaluationPeriods": 5,
+  "Threshold": 10,
+  "ComparisonOperator": "GreaterThanThreshold",
+  "AlarmActions": ["arn:aws:sns:us-east-1:123456789012:ops-alerts"]
+}
+```
+
+**3. CloudWatch Logs:**
+- EC2: **CloudWatch Agent** install karo → /var/log/ logs collect
+- Lambda: `print`/`console.log` automatically logs pe jaati hain (native)
+- ECS/Fargate: container logs — awslogs driver se
+- **Log Groups** — logs ka folder (jaise `/aws/lambda/my-function`)
+- **Log Streams** — ek container/instance ke logs (inside group)
+- **Retention** — set karo (1 day - 10 years) — cost control
+- **Export** — S3 pe export, Kinesis/S3 me streaming
+
+```bash
+# Logs dekhna
+aws logs filter-log-events --log-group-name /aws/lambda/my-function \
+  --filter-pattern "ERROR" --limit 20
+
+# Log group banao
+aws logs create-log-group --log-group-name /my-app/web
+```
+
+**4. CloudWatch Logs Insights:**
+- Query logs me SQL — fast search (logs pe):
+```sql
+-- Last 20 errors wali logs
+fields @timestamp, @message
+| filter @message like /(?i)error/
+| sort @timestamp desc
+| limit 20
+```
+
+```sql
+-- Lambda function: Kitni baar galat hua
+stats count(*) by @message
+| filter @message like /ERROR/
+| sort count desc
+| limit 10
+```
+
+**5. CloudWatch Dashboards:**
+- Multiple metrics ek screen pe — drag-drop widgets
+- **Automatic dashboards** — service review me ready-made
+- Share karna (HTML/JSON), embedded dashboards
+- Alerts ke liye color coding — red = alarm
+
+**Setup steps — EC2 monitoring:**
+1. **CloudWatch Agent install** (server metrics + logs):
+   ```bash
+   wget https://s3.amazonaws.com/amazoncloudwatch-agent/.../amazon-cloudwatch-agent.deb
+   sudo dpkg -i amazon-cloudwatch-agent.deb
+   ```
+   Configuration: CPU, memory, disk + `/var/log/app.log` include karo
+2. **IAM role** attach karo (CloudWatchAgentServerPolicy) 
+3. **Alarm banao:** Console → CloudWatch → Alarms → "Create alarm" → metric chuno → threshold → SNS topic
+4. **Dashboard banao:** Dashboards → widgets → metrics + logs
+5. **Insights query logs pe** — troubleshooting
+
+**CloudWatch vs X-Ray vs Prometheus/Grafana:**
+
+| Feature | CloudWatch | X-Ray | Prometheus/Grafana |
+|---------|-----------|-------|--------------------|
+| Type | AWS-native monitoring | Distributed tracing | Open-source monitoring (self-host) |
+| Metrics | ✅ (AWS-wide) | Tracing only | App metrics |
+| Logs | ✅ | ❌ | External (Loki) |
+| Distributed tracing | ❌ (connect wala) | ✅ | Jaeger/Zipkin |
+
+**Important points:**
+- Free tier: **10 custom metrics** + 5GB logs — basic monitoring free
+- **Cost control**: retention chhota rakho, no `*` queries, log volume dekhna
+- **Alarms cost** ~$0.10/alarm — 100 alarms = $10/mo
+- **Permissions** — IAM role me CloudWatchLogsFullAccess / CloudWatchAgentServerPolicy dena
+- Instance metrics (memory/disk) **by default nahi** — agent lagao
+- **Status checks** (EC2) — system/instance health — separate (free)
+- **Container Insights / Lambda Insights** — advanced service metrics (extra cost)
+
+**Analogy:** CloudWatch = **Hospital ICU monitor** — har patient (server) ka ECG ya CPU, heart rate (alarms), aur nurses logs (log files) sab kuch ek monitor pe. Alarm = **Emergency buzzer** — heart rate zyada hua to nurse ko call. Dashboards = **ICU room display** — doctor ko sab ICU stats ek jagah milta hai.
+
 
 
