@@ -58,6 +58,7 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 | **ElastiCache** | In-memory caching (Redis/Memcached) |
 | **MemoryDB** | Durable, Redis-compatible in-memory database |
 | **EMR** | Managed big data processing — Hadoop/Spark clusters on EC2 |
+| **Athena** | Serverless SQL queries directly on S3 data — pay per query |
 
 ### 🤖 AI / Machine Learning
 | Service | What it does |

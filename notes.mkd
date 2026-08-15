@@ -2593,4 +2593,99 @@ Athena / Redshift Spectrum / QuickSight → analytics
 
 **Analogy:** EMR = **Heavy machinery rental company** — aapko sirf kaam ke liye 10 cranes (nodes) chahiye? Rent karo 2 din ke liye, kaam karo, wapas de do. Cranes khareedne (permanent servers) ki zaroorat nahi. Spot instance = thodi si choti cranes jo aur sasti hain lekin kabhi bhi waapas maangi ja sakti hain.
 
+## Athena
+
+Athena AWS ka **serverless SQL query** service hai jo **directly S3 pe data query** karta hai — koi server, koi database setup, koi cluster nahi. Bas S3 me data hai, Athena pe SQL likho, result aapko mil jata hai. **Pay per query** (jo data scan hua uspe).
+
+**Example — Sales team ka quick query:**
+Amazon ki sales team poochti hai: "Kolkata me is hafte kaunsa product sabse zyada bika?"
+1. Data S3 me hai (orders/ ka Parquet) — koi database nahi, koi move nahi
+2. Team Athena pe SQL likhti hai:
+   ```sql
+   SELECT product_name, SUM(quantity) 
+   FROM orders 
+   WHERE city = 'Kolkata' AND week = 33 
+   GROUP BY product_name 
+   ORDER BY SUM(quantity) DESC 
+   LIMIT 10;
+   ```
+3. Athena S3 ke sirf zaroori files scan karta hai (partitioning + Parquet)
+4. Seconds me result — bill sirf scanned data ke liye (~$5/TB)
+
+**Athena key features:**
+- **Serverless** — kuch bhi provision nahi karna, zero management
+- **S3 pe directly** — data kisi database me load nahi karna padta
+- **Standard SQL** — ANSI SQL queries (jo developers/analysts already jante hain)
+- **Pay per query** — jo data scan hota hai uspe ($5.00/TB) — no idle cost
+- **Fast** — partition + columnar format (Parquet) pe milliseconds-second me
+- **Formats** — CSV, JSON, Parquet, Avro, ORC, log files, Glue tables
+- **Integrations** — Glue Data Catalog (tables), QuickSight (BI), Lambda (automation)
+
+**Athena kaise kaam karta hai?**
+
+```
+S3 (data) → Glue Data Catalog (table definitions) → Athena (SQL) → Results
+     ↑                                                  ↓
+  Uska Data Crawler se table banao                  (S3 me results save
+                                                     ho jate hain)
+```
+
+1. **Glue Data Catalog** me table banata hai (manual ya **Crawler** se) — batata hai: "ye S3 files ka structure kya hai"
+2. Athena query chalata hai
+3. Query engine files scan karta hai → SQL apply → result
+4. Results default S3 me save hote hain (aur CSV download)
+
+**Athena vs Redshift vs EMR — kab kya:**
+
+| Feature | Athena | Redshift | EMR (Spark) |
+|---------|--------|----------|-------------|
+| Type | Serverless SQL | Data warehouse (cluster) | Big data clusters |
+| Setup | 🔥 None — bas SQL | Cluster provision | Cluster launch |
+| Cost | Per query (scan) | Per cluster (24x7) | Per node per sec |
+| Best for | Ad-hoc queries, exploration | BI dashboards, repeated queries | Complex transformations, ML |
+| Data location | S3 (no copy) | Loaded into Redshift | S3/ HDFS |
+| Users | Analysts, developers | BI teams | Data engineers |
+
+**Answer:**
+- **Athena:** Kuch queries karni hain? Data S3 me hai? → Athena
+- **Redshift:** Sales team roz dashboards chalayegi, consistent fast response → Redshift (data load karke)
+- **EMR:** Complex Spark job (ML, heavy transformation) → EMR
+
+**Setup & use steps:**
+
+1. **Data S3 me rakho**: `s3://data-lake/processed/orders/` — Parquet + partitions (year=2026/)
+2. **Table banao** (2 tarike):
+   - **Manually:** Athena Console → "Create table" → S3 path, format, columns
+   - **Glue Crawler (recommended):** Crawler → S3 path scan → automatically table banaye
+3. **Query chalao:**
+   ```sql
+   SELECT year, SUM(total) FROM orders WHERE year = 2026 GROUP BY year;
+   ```
+4. **Results dekh lo** — Athena Console me ya S3 se CSV
+5. **QuickSight se connect karo** — visual dashboards
+
+**Partitioning practice:**
+```sql
+-- Partitioned table ke saath WHERE me partition column zaroor do
+SELECT * FROM orders WHERE year = 2026 AND month = 8;   -- ✅ fast, kam scan
+SELECT * FROM orders;                                   -- ❌ full scan, zyada cost
+```
+
+**Important points:**
+- **Scan cost** — `SELECT *` se bacho; sirf columns chuno
+- **Partition + Parquet** = 90% cost kam
+- Table names chhote karo (lowercase) — schema change par issue ho sakta hai
+- **Default result location** S3 me set karo — results kahan save honge
+- Query time limit: **30 min** default (workgroup se adjust)
+- Data catalog — AWS Glue **free tier** me bhi use hota hai (tables)
+- Athena **schema-on-read** — data S3 me change karo, table update karo
+
+**Pricing:**
+- **$5 per TB scanned** ($10/6 = ~$5 for PB-scale)
+- Partitioned/compressed data = kam scan = kam cost
+- Cheap example: 10MB scan = $0.00005, Koi query ~$0.01
+
+**Analogy:** Athena = **Google search for your S3 data** — Google ka server kharidne ki zaroorat nahi, bina software ke. Bas search (SQL) likho, results milengaye. Jaise search engine poori web ko scan karta hai, waise Athena S3 ko — sirf wo pages scan karta hai jo query se match hote hain (partitioning + Parquet).
+
+
 
