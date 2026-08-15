@@ -3295,5 +3295,99 @@ ORDER BY eventtime DESC;
 
 **Analogy:** CloudTrail = **Office CCTV + register book** — har kisi ka entry/exit (API call) recorded hota hai: kaun office aaya (IAM user), kab, kya kiya (eventName). Kuch bhi miss nahi hota — agar koi galti kare to pehle CCTV check karo. Security team kisi bhi suspicious activity ko usi register se investigate karti hai.
 
+## Config (AWS Config)
+
+Config AWS ki **resource configuration tracking & compliance** service hai — jo aapke AWS resources (EC2, S3, IAM, Security Groups, etc.) ki **configuration ko continuously record** karti hai, unke changes ko **history/timeline** me rakhti hai, aur **rules** se **compliance** check karti hai. Socho: "Mera environment ka document-holder, jo har badlav ko note karta hai aur rules ki khilaf warzi check karta hai."
+
+**Example — "Security Group kisi ne khola to?"**
+1. Ek developer EC2 security group me **port 22 (SSH) sab ke liye khol deta hai** (0.0.0.0/0)
+2. **Config rule** set hai: "SG me port 22 sab ke liye nahi khulna chahiye"
+3. Config detect karta hai → resource **NonCompliant** mark
+4. Notification (SNS) → security team ko pata chal jata hai
+5. Timeline me dekho — "kab khola, kaun khola, pehle kya tha" (config history)
+
+**Config ke 3 main kaam:**
+
+1. **Record** — har resource ka config snapshot + changes ki history (timeline)
+2. **Evaluate** — rules se compliance check (custom ya managed rules)
+3. **Remediate** — auto-fix non-compliant resources (SSM automation)
+
+**Core concepts:**
+
+| Concept | Kya hai |
+|---------|---------|
+| **Config recorder** | Resources ko continuously record karta hai (changes detect) |
+| **Configuration item** | Resource ki state — snapshot (one point of time) |
+| **Configuration history** | Saare changes — timeline (pehle kya tha → ab kya hai) |
+| **Configuration snapshot** | Saare resources ka full dump (S3 me store) |
+| **Resource timeline** | Ek resource ka config history (kab kya changed) |
+| **Rules** | Compliance check — managed (AWS ready) ya custom (Lambda) |
+| **Remediation** | Non-compliant resource → auto-fix |
+
+**Managed Rules (AWS built-in) — examples:**
+
+| Rule | Check karta hai |
+|------|----------------|
+| `restricted-ssh` | SG me port 22 public nahi |
+| `s3-bucket-public-read-prohibited` | S3 bucket public nahi |
+| `cloudtrail-enabled` | CloudTrail ON hai |
+| `encrypted-volumes` | EBS encrypted |
+| `iam-user-mfa-enabled` | Users pe MFA hai |
+| `lambda-function-public-access-prohibited` | Lambda public nahi |
+| `ec2-instance-no-public-ip` | EC2 me public IP nahi |
+| `rds-storage-encrypted` | RDS encrypted |
+
+**How it works:**
+
+```
+AWS Resources (EC2, S3, SG, IAM...)
+     ↓ Config Recorder (har change detect)
+Configuration Items → History + Snapshot (S3)
+     ↓
+Config Rules (managed/custom) → Compliance (Compliant/NonCompliant)
+     ↓
+SNS Notification → SQS → Alert/response (incident)
+     ↓ (remediation)
+SSM Automation → auto-fix
+```
+
+**Setup steps:**
+
+1. **Config ON karo** — Console → Config → "Get started"
+   - Choose: record all resources / specific regions
+   - S3 bucket (snapshots) + SNS topic (notifications) select/banao
+2. **Rules add karo:**
+   - "Add rule" → Managed rules search karo (`restricted-ssh`, `s3-bucket-public-read-prohibited`)
+   - Trigger: **On change** (resource badla) ya **periodic** (har 24h check)
+3. **Compliance dashboard** — Config → Rules → Compliance (kya compliant, kya not)
+4. **Remediation set karo** (optional) — "NonCompliant → SSM document run"
+5. **Aggregator** (multi-account) — saare accounts ki compliance ek jagah
+
+**Config vs CloudTrail:**
+
+| Feature | AWS Config | CloudTrail |
+|---------|-----------|------------|
+| Track kya | **Resource configuration** (kya hai, kya tha) | **API actions** (kaun kya kiya) |
+| Records | Config changes + history | API calls + events |
+| Compliance | ✅ Rules/checks | ❌ (event log) |
+| Timeline | ✅ Per-resource history | Events order me |
+| Use case | "SG public hai" check, audit | "DeleteBucket kisne kia" investigation |
+| Analogy | **Chef ka kitchen — saaman & recipe check** | **CCTV — kaun andar aaya** |
+
+**Dono milakar (example):**
+- CloudTrail: "Kisne khola port 22?" (call)
+- Config: "Kya port 22 khula hai + kab khola gaya + konsa rule toota" (state + timeline)
+
+**Important points:**
+- **Pricing:** per rule per month + per config item (first 100k free)
+- Config items: $0.003/item, Rules: $0.001/rule/month evaluation (approx)
+- Exclude high-change resources (Lambda versioning) — cost bachao
+- **Delivery channel** — S3 (history) + SNS (notifications) mandatory
+- Aggregator → multi-account/region single view
+- **Conformance packs** — templates (multi rules ek pack) — compliance frameworks
+- Config + **SSM Automation** = auto-remediation (self-healing infra)
+
+**Analogy:** AWS Config = **Quality inspector in factory** — machine (resource) ki har setting register karta hai, check karta hai "ye setting standard ke mutabik hai?" (rule). Agar machine galti se galat setting pe chali gayi (non-compliant) → inspector report karta hai + fix karvata hai (remediation). CloudTrail = **CCTV** jo baat ni karta ki machine galat hai, bas record karta hai "kisne button dabaya".
+
 
 

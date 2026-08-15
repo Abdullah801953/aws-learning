@@ -65,6 +65,7 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 | **Kinesis** | Real-time data streaming — Data Streams, Firehose, Analytics |
 | **CloudWatch** | Monitoring & observability — metrics, alarms, logs, dashboards |
 | **CloudTrail** | Audit logging — records every API call for security & compliance |
+| **Config** | Resource configuration tracking & compliance rules |
 
 ### 🤖 AI / Machine Learning
 | Service | What it does |
