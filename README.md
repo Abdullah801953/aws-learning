@@ -70,6 +70,7 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 | **CodeBuild** | Managed CI/CD build & test service (part of CodeSuite) |
 | **CodeDeploy** | Automated deployments — EC2, Lambda, ECS (blue/green, rolling) |
 | **CodePipeline** | CI/CD orchestration — source/build/test/deploy pipeline stages |
+| **CloudFormation** | Infrastructure as Code — infrastructure via YAML/JSON templates |
 
 ### 🤖 AI / Machine Learning
 | Service | What it does |

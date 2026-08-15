@@ -3801,5 +3801,162 @@ aws codepipeline start-pipeline-execution --name my-app-pipeline
 
 **Analogy:** CodePipeline = **Assembly line conveyor** — har station (stage) ek kaam karta hai: station 1 code greht hai, station 2 build, station 3 test, wo bhi approval gate (insaan) khulti hai, aakhri station deploy. Ek station fail → poori line stop + alarm. Line khud chalti hai jab naya code (product) aata hai — aapko koi step manually nahi karna.
 
+## CloudFormation (Infrastructure as Code)
+
+CloudFormation AWS ki **Infrastructure as Code (IaC)** service hai — jisme aap **YAML/JSON template** me apni poori infrastructure (EC2, S3, VPC, IAM, RDS...) define karte ho, aur CloudFormation usse **stacks** me banata/update/detele-karta hai. **Code jaise infra treat karo** — version control, review, reuse, automation.
+
+**Example — Amazon ka web app infra setup:**
+1. Developer template likhta hai: 2 EC2 (t3.micro), 1 ALB, 1 RDS, security groups, IAM role
+2. `aws cloudformation deploy` chalao (ya console)
+3. CloudFormation **saare resources order me** banata hai (dependencies resolve)
+4. **Rollback** — beech me EC2 fail → saare created resources cleanup + error
+5. 2nd environment (staging/prod) → same template → seedha deploy
+
+**Kyun IaC (bina manual console)?**
+
+| Aspect | Manual (Console/CLI) | CloudFormation |
+|--------|---------------------|----------------|
+| Setup time | Hours — clicking | Minutes — template deploy |
+| Repeatability | Har baar naya setup | **Same result har baar** |
+| Version control | ❌ | ✅ (template git me) |
+| Review | ❌ | ✅ (code review) |
+| Consistency | Human error possible | Deterministic |
+| Rollback | Manual | ✅ Auto |
+
+**Core concepts:**
+
+| Concept | Kya hai |
+|---------|---------|
+| **Template** | Infra ki definition (YAML/JSON) — "recipe" |
+| **Stack** | Template se banne wale resources ka group (live infra) |
+| **Resource** | Ek AWS service instance (bucket, instance, role) |
+| **Parameters** | Input values (env, instance size, names) — deploy time pe |
+| **Outputs** | Stack ke values (EC2 IP, bucket name) — dusre stacks me use karo |
+| **Mappings** | Env-specific values lookup (prod → m5.large) |
+| **Conditions** | If-then create resources (Prod me multi-AZ, Dev me nahi) |
+| **Change Set** | Preview — deploy se pehle "kya badlega" (dry-run) |
+| **Drift detection** | Manual changes ka pata lagana (template vs reality) |
+| **Nested stacks** | Stack ke andar stack (reuse modules) |
+
+**Template example (EC2 + S3 + security group):**
+```yaml
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Simple web server stack
+
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues: [t3.micro, t2.micro, m5.large]
+
+Resources:
+  WebServerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  WebServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: ami-0abcdef1234567890
+      SecurityGroupIds:
+        - !Ref WebServerSG
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          yum install -y httpd
+          systemctl start httpd
+
+  WebsiteBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain   # delete pe bucket nahi jayega
+
+Outputs:
+  ServerIP:
+    Value: !GetAtt WebServer.PublicIp
+```
+
+**Intrinsic functions (template me helper):**
+- `!Ref` — resource/parameter ka reference (name/ID)
+- `!GetAtt` — resource ki property (PublicIp, ARN)
+- `!Sub` — string interpolation (`${EnvName}-bucket`)
+- `!Join / !Split` — strings combine/split
+- `!If` — condition logic
+- `!Select / !FindInMap` — list/map se value
+
+**CLI commands:**
+```bash
+# Stack deploy karo (template + parameters)
+aws cloudformation deploy \
+  --template-file template.yml \
+  --stack-name my-app-stack \
+  --parameter-overrides Env=prod InstanceType=m5.large \
+  --capabilities CAPABILITY_IAM
+
+# Status check
+aws cloudformation describe-stacks --stack-name my-app-stack
+aws cloudformation list-stack-resources --stack-name my-app-stack
+
+# Changes preview (deploy se pehle)
+aws cloudformation create-change-set \
+  --stack-name my-app-stack \
+  --template-body file://template.yml \
+  --change-set-name my-changes
+
+# Stack delete (saare resources cleanup)
+aws cloudformation delete-stack --stack-name my-app-stack
+```
+
+**Setup steps (console):**
+1. Template file repo me rakho (YAML) — git versioned
+2. Console → CloudFormation → "Create stack" → template upload (ya S3)
+3. **Parameters** fill karo (stack name, env, instance type)
+4. Options: IAM capabilities, tags, rollback settings
+5. **Review + create** — CloudFormation resources banata hai (Events tab pe live)
+6. **Update** — template edit karo → deploy → Change Set review → execute
+7. **Delete** — poora stack cleanup (saare resources galat ho jate hain)
+
+**Drift detection:**
+- Agar koi console se manually resource badal de (template se bahar)
+- "Detect drift" → stack status: **DRIFTED** (resource alag)
+- Fix: template ke mutabik wapas lao ya update
+
+**CloudFormation vs Terraform:**
+
+| Feature | CloudFormation | Terraform |
+|---------|---------------|-----------|
+| Vendor | AWS-only | **Multi-cloud** (AWS, GCP, Azure) |
+| Language | YAML/JSON (native) | **HCL** (Terraform language) |
+| State tracking | AWS handles (free) | State file (S3/backend) |
+| Modules/Reuse | Nested stacks | Modules (registry) |
+| AWS integration | ✅ Deepest (custom resources, CDK) | Good (providers) |
+| When | AWS-only infra | Multi-cloud, team already terraform |
+
+**CloudFormation vs CDK:**
+- **CDK (Cloud Development Kit)** — same CloudFormation, but **code languages** (TypeScript/Python/Java) me template define
+- CloudFormation = YAML template; CDK = code → compiles to CloudFormation template
+- CDK = better for developers (logic, loops)
+
+**Pricing:**
+- **Free** — CloudFormation service koi cost nahi
+- Sirf resources ki cost (EC2, RDS jo template banata hai)
+
+**Important points:**
+- **Rollback on failure** — default ON — failed stack auto-cleanup
+- **UpdateRollback** — update fail → pehle version restore
+- **DeletionPolicy** — `Retain` (bucket delete pe bhi rehta) / `Snapshot` (EBS backup)
+- **Stack sets** — ek template multiple accounts/regions pe
+- **Parameter store** — secret values CloudFormation me directly mat dalo — SSM/Secrets Manager reference karo
+- **Nested stacks** — modular infra (network stack, app stack)
+- **Change Sets** hamesha review karo — production me accidental delete se bacho
+
+**Analogy:** CloudFormation = **Blueprint for building house** — architect (developer) ek drawing (template) banata hai, contractor (CloudFormation) uske mutabik poora house (stack) banata hai — har kamra (resource) sahi jagah, sahi order me. Agar koi kamra galat bana (fail) → poora kaam wahi ruk jaata hai (rollback). Naya makaan (staging) — wahi blueprint — 1 minute. Terraform = dusra contractor jo kisi bhi city me ghar bana sakta hai (multi-cloud), Blueprint yahi rahega.
+
 
 
