@@ -4078,6 +4078,99 @@ cdk watch         # auto-deploy on change (dev)
 
 **Analogy:** CloudFormation = **Architect's hand-drawn blueprint (YAML)** — sahi hai but har baar haath se drawing. CDK = **Architecture software (AutoCAD-like)** — aap code/buttons (programming) se design karte ho, wo khud blueprint (CloudFormation) print kar deta hai. Loops = ek click me 10 floors (buckets) banjana. Developer ke liye — code likhna aata hai, YAML nahi — **CDK = infra in Python/TS.**
 
+## Amplify (Developer Productivity)
+
+Amplify AWS ka **full-stack development platform** — jo developers ko **web/mobile apps** poori tarah banane mein madad karta hai: **backend (auth, data, storage, functions) + hosting (frontend deploy) + CI/CD** — sab ek jagah, minimum setup. AWS backend ki complexity ko simple SDK/CLI me wrap kar deta hai — developer sirf app logic pe focus karta hai.
+
+**Example — Amazon ka customer app (React):**
+1. Developer VS Code me React app likhta hai
+2. `amplify add auth` → login/signup (Cognito behind the scenes)
+3. `amplify add api` → GraphQL API + DynamoDB table (AppSync backend)
+4. `amplify add storage` → S3 for user uploads
+5. `amplify push` → sab AWS me banta hai (CloudFormation se)
+6. `amplify publish` → app **hosted** on Amplify Hosting (CDN + SSL + custom domain)
+7. Code push GitHub pe → **CI/CD auto**: build + deploy — preview PRs
+
+**Amplify kitne cheezein karta hai (2 parts):**
+
+| Part | Kya hai |
+|------|---------|
+| **Amplify Gen 2 (backend as code)** | Backend code me define karo (TypeScript) — auth, data, functions — CDK powered |
+| **Amplify Hosting** | Web app hosting — static + SSR (Next.js) + global CDN + SSL + CI/CD |
+
+**Amplify backend services (behind the scenes):**
+
+| Amplify Component | AWS service (actually) |
+|-------------------|------------------------|
+| `amplify add auth` | **Cognito** (User Pools — sign up/in) |
+| `amplify add api` | **AppSync** (GraphQL) + DynamoDB |
+| `amplify add storage` | **S3** |
+| `amplify add function` | **Lambda** |
+| `amplify hosting` (deploy) | CloudFront (CDN) + S3, SSR |
+| Backend as Code (Gen 2) | **CDK/CloudFormation** (compiled) |
+
+**Key features:**
+- **Backend as code (Gen 2)** — TypeScript me define, `amplify deploy`
+- **Auth UI ready** — login/register widgets (Cognito backed)
+- **GraphQL/Data** — AppSync — filters, real-time subscriptions
+- **Hosting w/ CI/CD** — GitHub/GitLab/Bitbucket connect → auto deploy + **PR previews**
+- **SSR support** — Next.js, Remix, Astro (server-side rendering)
+- **Multi-environment** — dev/staging/prod (enabled via branches)
+- **SDKs** — React, Vue, React Native, Swift, Android, Flutter — ready helpers
+- **Local dev** — `amplify sandbox` — local mock (auth/data)
+
+**Workflow (Gen 2):**
+```
+amplify init           # project setup
+amplify add auth       # define auth in backend/auth/resource.ts
+amplify add api        # define data schema (GraphQL)
+amplify add storage    # S3 bucket
+amplify deploy         # backend AWS me banao (CDK)
+amplify publish        # frontend host karo
+```
+CI/CD: GitHub push → branch maag → built+deployed — PR preview link milega
+
+**Example — auth config (resource.ts):**
+```ts
+import { defineAuth } from '@aws-amplify/backend';
+
+export const auth = defineAuth({
+  loginWith: {
+    email: true,
+  },
+  userAttributes: {
+    'custom:role': { required: false },
+  },
+});
+```
+
+**Amplify vs EC2/ECS hosting (traditional):**
+
+| Feature | Amplify | EC2/ECS (manual) |
+|---------|---------|------------------|
+| Setup | **Minutes** (CLI/console) | Hours/days (VPC, SG, deploy config) |
+| Hosting | Managed (CDN+SSL) | Build khud setup karo |
+| CI/CD | ✅ Built-in (branch deploy) | CodePipeline manually jodo |
+| Backend | ✅ Included (auth/data/storage) | Khud IAM + services |
+| Scaling | Auto (CloudFront + serverless) | Auto Scaling config karna |
+| Best for | **Frontend-heavy apps (React/Next.js), MVPs, demos** | Custom server apps, complex infra |
+
+**Pricing:**
+- **Amplify Hosting:** pay as you go — build minutes + hosting (CDN data transfer) — starting free tier (~1000 build min/mo? apna account check karo)
+- Backend services — **Cognito/S3/AppSync/Lambda** ka normal cost (serverless, low cost for dev)
+- Ping: MVP ke liye ~free tier ke andar enough
+
+**Important points:**
+- **Gen 2 = TypeScript (backend as code)** — power of CDK bina YAML headaches
+- **`amplify sandbox`** — local dev environment (fast iteration)
+- **PR previews** — GitHub PR pe live preview link — review ke liye best
+- **Custom domains** — route53/custom domain attach (easy setup)
+- **Amplify Admin UI (Studio)** — non-devs bhi data/auth manage kare
+- **Limits:** Hosting SSR regions — check (us-east-1, eu-west-1...) — free tier compute limits
+- Best for: **frontend teams** — backend dev ki complexity na chahte hon
+
+**Analogy:** Amplify = **IKEA furniture for full app** — aapko har cheez alag alag nahi khareedni (Cognito, AppSync, S3, CloudFront — alag alag stores). Amplify = **One kit** — login (auth), data (database), storage, hosting sab box me aata hai — aap instructions (CLI/TS config) follow karte ho, sab ek saath ghar pe ready. Hosting = IKEA pickup wala delivery — ek click me deploy.
+
 **CDK best practices (quick):**
 - Small focused stacks (poora infra ek stack me mat dalo)
 - `cdk diff` review hamesha — accidental changes se bacho

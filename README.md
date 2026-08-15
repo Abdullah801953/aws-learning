@@ -72,6 +72,7 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 | **CodePipeline** | CI/CD orchestration — source/build/test/deploy pipeline stages |
 | **CloudFormation** | Infrastructure as Code — infrastructure via YAML/JSON templates |
 | **CDK** | Infrastructure as Code in real languages (Python/TS) → CloudFormation |
+| **Amplify** | Full-stack dev platform — backend + hosting + CI/CD for web/mobile apps |
 
 ### 🤖 AI / Machine Learning
 | Service | What it does |
