@@ -4,6 +4,8 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 
 > **Note:** Detailed, step-by-step notes with real-world examples (Amazon-style use cases), setup guides, CLI commands, pricing comparisons, and analogies are available in [`notes.mkd`](./notes.mkd).
 
+![AWS Screenshot](aws-screenshot.png)
+
 ---
 
 ## 📚 Topics Covered
