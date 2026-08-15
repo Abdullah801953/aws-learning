@@ -4895,6 +4895,161 @@ VPC A (10.0.0.0/16) ⇄ pcx-xxx ⇄ VPC B (10.0.5.0/16)
 
 **Analogy:** VPC = **Gated community** — poora society (VPC) ka ek fence (CIDR), andar blocks (subnets), roads (route tables), gate (IGW), guards (SG/NACL). Public block = **Front shops** (maine road pe — sabko accessible). Private block = **Ghar** — andar ka traffic sirf guards (SG) se allowed. NAT = **Security kiosk** — residents (private) bahar jaa sakte hain lekin outsiders andar nahi. Peering = **Two societies ka private shortcut road**. Endpoint = **Society ki internal post office** — bahar ki post (internet) ke bina items (S3) deliver.
 
+## VPN (Site-to-Site & Client VPN)
+
+VPN AWS ki **encrypted private connection** services hain jo **aapke on-premises data center / company office ko AWS VPC se secure** connect karti hain — internet ke encrypted tunnel me. **DoS tarah:**
+
+| Type | Kya connect karta hai | Use Case |
+|------|----------------------|----------|
+| **Site-to-Site VPN** | Office/DC ↔ AWS VPC (IPsec) | Company ka data center se AWS |
+| **Client VPN** | Individual employees (laptop) ↔ AWS | Remote teams — kisi bhi jagah se |
+
+**Example — Amazon ka office + AWS hybrid:**
+Amazon ka office Mumbai me hai, infra AWS me:
+1. **Site-to-Site VPN** — office ka **VPN gateway** ↔ AWS **Virtual Private Gateway (VGW)** — IPsec tunnel
+2. Office ke employees AWS resources (private subnets) ko **direct access** karte hain — jaise on-prem network me ho
+3. Traffic **encrypted** jaata hai — koi intercept nahi kar sakta
+4. **Client VPN** — remote employee (delhi me) laptop se `AWS Client VPN` connect → office/AWS resources
+5. **Direct Connect** (alag) — private dedicated line (no internet) — VPN se faster/stable for production
+
+**Site-to-Site VPN components:**
+```
+Office (on-prem)
+  ├── Customer Gateway (CGW) — aapka VPN device (on-prem)
+  └── IPsec tunnel (2 tunnels — HA)
+            ↓
+AWS VPC
+  ├── Virtual Private Gateway (VGW) — AWS side endpoint
+  ├── Route table (0.0.0.0/0 → VGW for traffic) 
+  └── Target: private subnets
+```
+
+**Site-to-Site VPN setup steps:**
+1. AWS side: **Virtual Private Gateway (VGW)** banao + VPC pe attach
+2. **Customer Gateway (CGW)** — on-prem VPN device ka info (public IP, BGP options) add karo
+3. **VPN Connection** banao — VGW + CGW → 2 tunnels
+4. On-prem router pe **config download** karo (Cisco/Juniper/OpenVPN formats) → apply
+5. VPC route table me on-prem CIDR → VGW route add karo
+6. On-prem side bhi AWS CIDR → VPN route
+7. Test: ping/connect private instance
+
+**Client VPN setup steps:**
+1. **Client VPN endpoint** banao (VPC me, subnets + SG)
+2. **Certificates** — server + client certs (ACM ya self-signed)
+3. Auth: certificates ya **SAML** (downstream IdP — company SSO)
+4. Association — subnets se attach + route add
+5. Users: **AWS Client VPN app** (Windows/Mac/Linux) → config file → connect
+
+**VPN vs Direct Connect:**
+
+| Feature | Site-to-Site VPN | Direct Connect |
+|---------|------------------|----------------|
+| Connection | **Internet pe encrypted tunnel** | **Dedicated private line** (no internet) |
+| Speed | Depends on internet (10-100Mbps-ish real) | **1-100 Gbps** |
+| Latency | Variable | **Consistent low** |
+| Cost | Cheap (per connection/hour) | Expensive (port + line charges) |
+| Reliability | Internet issues se affected | Highly reliable (SLAs) |
+| Setup | Hours | Weeks (telco line) |
+| When | **Start/small**, backup link | Production, large data transfer, low latency |
+
+**VPN pricing:** per VPN connection per hour (~$0.05/hr) — plus data transfer (no charge for VPN tunnel egress to on-prem, ingress free), Client VPN per endpoint + per connection aur.
+
+**Important points:**
+- **2 tunnels** hamesha (HA) — ek fail doosra sambhalta
+- **BGP** dynamic routing (or static routes) — BGP better for failover
+- **NAT/PAT overlap** careful — CIDR overlap (same IP range on-prem + VPC) = merge before
+- VPN + Direct Connect dono = **regional + backup path** (best practice)
+- Client VPN → **split tunnel** option — sirf AWS traffic VPN se, baaki direct internet (cost kam)
+- **Transit Gateway VPN** — multiple VPCs/on-prem hub-spoke
+
+**Analogy:** Site-to-Site VPN = **Company buildings ka private tunnel** — do buildings (office ↔ AWS) ke beech sealed underground tunnel (IPsec) — sirf employees (resources) andar. Client VPN = **Personal security tunnel** — remote employee jahan bhi ho, uske laptop se company network ka safe tunnel. Direct Connect = **Dedicated highway** — koi traffic light nahi, fastest — but construction me time lagta hai.
+
+## PrivateLink (AWS PrivateLink)
+
+PrivateLink AWS ki **private service connectivity** — jisse aap **internet ke bina** do VPCs/services ko connect karte ho — **private IPs pe, pehle se built security**. AWS services (S3, DynamoDB, APIs, saath hi third-party services) ko aapke VPC ke andar jaise private endpoint se access karte ho. **Koi data public internet/customer VPC se pass nahi hota.**
+
+**Problem — without PrivateLink:**
+```
+VPC A (service)        VPC B (consumer)
+  └── service app          └── access?
+        ↓                        ↓
+     Public IP/ALB       internet pe (insecure)
+```
+- Service public karni padti hai (security risk)
+- Ya peering (transitive nahi + centralized management mushkil)
+
+**PrivateLink solution:**
+```
+VPC A (service provider)
+  └── NLB/ALB + PrivateLink service
+          ↓ (endpoint service)
+VPC B (consumer)
+  └── VPC Endpoint (interface — private ENI in B's subnet)
+          ↓
+      Service ko private IP se access — no internet
+```
+
+**Core concepts:**
+
+| Concept | Kya hai |
+|---------|---------|
+| **Endpoint Service** | Service provider ka published service (NLB/ALB/GWLB ke peeche) |
+| **VPC Endpoint (Interface)** | Consumer side ka private ENI — service connect |
+| **Gateway Endpoint** | S3/DynamoDB ke liye (route-based, free) |
+| **Private DNS** | Customer side DNS names → private IPs resolve |
+| **Consumer principal** | IAM me "aws:SourceVpce" — trusted consumers only |
+
+**PrivateLink use cases:**
+- **SaaS/services** — apni service doosre accounts/VPCs ko private access do (marketplace listing)
+- **AWS services private access** — S3, DynamoDB, API Gateway, CloudWatch, Lambda (via interface endpoints)
+- **VPC-to-VPC service access** — peering ke bina service sharing (no transitive issue)
+- **Security/Compliance** — data never touches internet — zero exposure
+
+**PrivateLink vs VPC Peering:**
+
+| Feature | PrivateLink | VPC Peering |
+|---------|-------------|-------------|
+| Scope | **Service-to-VPC** (endpoint service) | **VPC-to-VPC** (full network) |
+| Transitive | ✅ (every VPC apna endpoint) | ❌ |
+| Access | Sirf specific service/endpoints | Poora CIDR visible |
+| Security | Private endpoint only — isolated | Full network peering |
+| Best for | Sharing ONE service with many VPCs | Two VPCs ko poori connectivity |
+
+**PrivateLink vs NAT/IGW (internet):**
+
+| Feature | PrivateLink | Internet (NAT/IGW) |
+|---------|-------------|---------------------|
+| Security | **No public exposure** | Public IP involved |
+| Data path | Private network | Internet |
+| Compliance | ✅ (no data egress) | ❌ (data egress cost + risk) |
+| Cost | Hourly endpoint + data | NAT cost + data transfer |
+
+**Setup steps (service provider):**
+1. **NLB (ya ALB/GWLB)** banao — service behind load balancer
+2. Console → VPC → **"Create endpoint service"** — NLB select karo
+3. Service name bante hai (com.amazonaws.vpce.<region>.<id>)
+4. **Allowlist principals** — kaunse accounts access kar sakte (ARN list)
+5. Notifications (SNS) — attach approve/reject requests
+
+**Setup steps (consumer):**
+1. Console → VPC → "Create endpoint" → **Interface** type
+2. Service name paste karo (ya choose from list)
+3. Subnets select (private) + security group
+4. **Private DNS** enable (service hostname → private IP)
+5. Access IAM check (endpoint policy)
+
+**Pricing:** per endpoint **hourly** + **data processed per GB** (endpoint + service side). Gateway endpoints — S3/DynamoDB — **free** (no hourly).
+
+**Important points:**
+- **`aws:SourceVpce`*/`aws:SourceVpc`** conditions — IAM me trusted endpoints enforce (security)
+- Interface endpoints require **subnet + SG** (like ENI)
+- Endpoint **policies** — consumer side restriction (jaise S3 endpoint = prefix-only)
+- PrivateLink + **Transit Gateway** — on-prem se bhi private services access
+- **Cross-account allowed** — approval flow (reject/accept)
+- **Region bound** — endpoints region me local (cross-region nahi default)
+
+**Analogy:** PrivateLink = **Private courier connection** — aapke ghar (VPC) se doosri company (service) tak ek **confirmed door-to-door courier** (endpoint) jo sirf aapka hi lekin security-checked package (data) delivery karta hai — kisi public road (internet) se nahi. Peering = full road between two societies. Gateway endpoint = **Society ka baaja office** (free) for local S3 mail. NAT/IGW = **Bahar ki delivery** — internet pe — data sabse open.
+
 **CDK best practices (quick):**
 - Small focused stacks (poora infra ek stack me mat dalo)
 - `cdk diff` review hamesha — accidental changes se bacho

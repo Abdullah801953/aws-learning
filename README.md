@@ -17,6 +17,8 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 | **CloudFront** | CDN — serves content from 600+ edge locations worldwide with caching, SSL, DDoS protection |
 | **ELB (Load Balancer)** | Distributes traffic across servers — ALB (L7), NLB (L4), GWLB (IP) |
 | **VPC** | Virtual private cloud — subnets, route tables, IGW/NAT, SG/NACL |
+| **VPN** | Site-to-Site & Client VPN — encrypted on-prem ↔ AWS connectivity |
+| **PrivateLink** | Private service connectivity — no internet, via VPC endpoints |
 
 ### 🛡️ Security, Identity & Compliance
 | Service | What it does |
