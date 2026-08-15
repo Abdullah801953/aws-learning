@@ -1,0 +1,2274 @@
+# AWS (Amazon Web Services)
+
+Amazon Web Services (AWS) ek cloud computing platform hai jo Amazon provide karta hai. Ismein compute, storage, database, networking, AI/ML, aur 200+ cloud services available hain jo pay-as-you-go model pe milti hain.
+
+## Route 53
+
+AWS Route 53 ek **DNS (Domain Name System)** web service hai jo domain names (jaise amazon.com) ko IP addresses me resolve karta hai. Iska naam "Route 53" DNS ke port 53 se aaya hai.
+
+**Example - amazon.com:**
+Jab aap browser me `amazon.com` type karte hain:
+1. Browser Route 53 se puchta hai ki "amazon.com ka IP kya hai?"
+2. Route 53 DNS records check karta hai
+3. Aapko Amazon ke server ke IP address (jaise `176.32.103.205`) pe bhej deta hai
+4. Aapka browser us IP se connect hokar website load karta hai
+
+Route 53 main features:
+- **Domain registration** - naye domain khareedna (jaise amazon.com)
+- **DNS routing** - domain ko IP se map karna
+- **Health checking** - servers healthy hain ya nahi check karna
+
+### Route 53 Setup Steps
+
+1. **Domain register karo** (ya existing domain use karo)
+   - AWS Route 53 se naya domain khareedo ya kisi aur registrar se laao
+
+2. **Hosted Zone banao**
+   - AWS Console → Route 53 → Hosted Zones → "Create Hosted Zone"
+   - Domain name daalo (jaise `example.com`) aur type "Public Hosted Zone" select karo
+
+3. **DNS records add karo**
+   - **A record** - domain ko IPv4 address se map karo (jaise `example.com → 192.0.2.1`)
+   - **CNAME record** - subdomain ko dusre domain se map karo (jaise `www.example.com → example.com`)
+   - **MX record** - email ke liye
+   - **NS record** - name server details (ye automatically aa jate hain)
+
+4. **Name servers update karo** (agar domain bahar se khareeda hai)
+   - Route 53 4 name server addresses deta hai
+   - Apne domain registrar ke paas jaake NS records update karo
+
+5. **Health checks configure karo** (optional)
+   - Resources healthy hain ya nahi monitor karne ke liye
+
+6. **Test karo**
+   - `dig example.com` ya `nslookup example.com` command se check karo
+
+## S3 (Simple Storage Service)
+
+AWS S3 ek **object storage** service hai jo cloud me unlimited data store karne deti hai. Data **buckets** me save hota hai aur har file (object) ka ek unique URL hota hai.
+
+**Example - amazon.com ke product images:**
+Jab aap amazon.com koi product kholte hain to images dikhti hain:
+1. Amazon ke servers product images ko S3 buckets me store karte hain
+2. Har image ka ek URL hota hai jaise: `https://m.media-amazon.com/images/I/71eX.jpg`
+3. Jab aap page kholte hain, browser directly S3 se image fetch karta hai
+
+**Example - amazon.com ka static content:**
+- Product photos, CSS files, JavaScript files — sab S3 me store hote hain
+- Amazon Static CDN bhi S3 ke upar banaya hai (amazon.com/images/, amazon.com/css/)
+- Ye high traffic handle kar leta hai bina server load kiye
+
+**S3 key features:**
+- **Scalability** - kitni bhi storage, automatically scale ho jata hai
+- **Durability (99.999999999%)** - data 11 9s tak safe rehta hai
+- **Security** - IAM polices, bucket policies, encryption
+- **Lifecycle policies** - old data ko cheaper storage me move karna (S3 → S3 Glacier)
+- **Static website hosting** - S3 se directly website host kar sakte hain
+
+**Storage Classes:**
+- S3 Standard - frequently accessed data
+- S3 Infrequent Access - kam access hone wala data
+- S3 Glacier - archival data (backup ke liye)
+- S3 Glacier Deep Archive - sabse sasta
+
+### S3 Setup Steps
+
+1. **AWS Console me login karo** → S3 service me jao → "Create bucket" click karo
+
+2. **Create bucket form me ye settings hain:**
+
+   **Bucket type:**
+   - **General purpose** - normal use cases, multiple AZs, mix of storage classes (recommended)
+   - **Directory** - low latency, single AZ, only S3 Express One Zone
+
+   **Bucket namespace:**
+   - **Global namespace** - default, bucket name world-wide unique
+   - **Account Regional namespace (recommended)** - unique to your account, kisi aur ka same name ho sakta hai
+
+   **Bucket name:** globally unique naam (3-63 chars, a-z 0-9 . -)
+
+   **Object Ownership:**
+   - **ACLs disabled (recommended)** - sab objects is account ke, sirf policies se access control
+   - **ACLs enabled** - doosre AWS accounts bhi objects ke owner ho sakte hain
+
+   **Block Public Access settings (4 options):**
+   - Block public access to buckets and objects granted through **new ACLs**
+   - Block public access to buckets and objects granted through **any ACLs**
+   - Block public access through **new public bucket or access point policies**
+   - Block **public and cross-account access** through any public bucket/access point policies
+   - ⚡ "Block all public access" ON rakho unless website host karna ho
+
+   **Bucket Versioning:**
+   - **Disable** (default)
+   - **Enable** - multiple object versions rakhna, accidental delete se bachao
+
+   **Tags - optional:** cost allocation aur resource organization ke liye
+
+3. **Objects (files) upload karo**
+   - Bucket kholo → "Upload" click karo
+   - Files ya folders drag & drop karo
+   - Upload ho jane par har file ka ek **object URL** milta hai
+
+4. **Permissions set karo**
+   - **Bucket Policy** - JSON policy likho ki kon access kar sakta hai
+   - **IAM Policies** - users/roles ko S3 access do
+   - **ACLs** - object-level permissions (optional)
+
+5. **Versioning enable karo** (recommended)
+   - "Properties" tab → "Bucket Versioning" → "Enable"
+   - Har update par purani file version save rehti hai — accidental delete se bachao
+
+6. **Static website hosting** (agar website host karna hai)
+   - "Properties" → "Static website hosting" → "Enable"
+   - Index document (jaise `index.html`) set karo
+   - Bucket public karo aur content upload karo — ek live website ready!
+
+7. **Lifecycle rules banao** (cost save karne ke liye)
+   - 30 din baad → S3 Standard se S3 Infrequent Access
+   - 90 din baad → S3 Glacier
+   - 365 din baad → permanently delete
+
+8. **Test karo**
+   - AWS Console me file kholo ya CLI se check karo:
+   - `aws s3 ls s3://my-bucket-name`
+   - `aws s3 cp test.txt s3://my-bucket-name/`
+
+### S3 Object - Terminal me URL nikalne ke tarike
+
+S3 me kisi object ko reference karne ke 3 tarike hain:
+
+| Type | Example |
+|------|---------|
+| **S3 URI** | `s3://werdfgas34/about-us.png` |
+| **ARN** | `arn:aws:s3:::werdfgas34/about-us.png` |
+| **Object URL** | `https://werdfgas34.s3.us-east-1.amazonaws.com/about-us.png` |
+
+**Terminal se Object URL generate karna:**
+```bash
+# Presigned URL (temporary access — public bucket nahi hai to bhi kaam karta hai)
+aws s3 presign s3://werdfgas34/about-us.png --expires-in 3600
+
+# S3 URI format se file copy karna
+aws s3 cp s3://werdfgas34/about-us.png ./downloads/
+
+# Object ka info dekhna (Etag, size, last modified)
+aws s3api head-object --bucket werdfgas34 --key about-us.png
+
+# Object URL manually banao (public bucket ho tab)
+echo "https://werdfgas34.s3.us-east-1.amazonaws.com/about-us.png"
+```
+
+**Pattern:**
+```
+https://<bucket-name>.s3.<region>.amazonaws.com/<key>
+```
+
+**Presigned URL** — jab bucket private ho aur kisi ko temporary access dena ho (like shareable link).
+
+### ⚠️ Access Denied — kyun aur kya karein?
+
+**Reason:** Bucket private hai (Block Public Access ON hai). Direct Object URL se sirf **public buckets** ka hi access hota hai.
+
+**⚠️ Pehle AWS CLI install karo:**
+```bash
+sudo apt update && sudo apt install awscli -y
+# Verify:
+aws --version
+```
+AWS CLI install hone ke baad **configure** bhi karna zaroori hai:
+```bash
+aws configure
+# Enter:
+#   AWS Access Key ID
+#   AWS Secret Access Key
+#   Default region (jaise us-east-1)
+#   Default output format (json/table/text)
+```
+
+**Solution 1 — Presigned URL (recommended):**
+```bash
+# Terminal se presigned URL generate karo
+aws s3 presign s3://werdfgas34/about-us.png --expires-in 3600
+# Output: https://werdfgas34.s3.us-east-1.amazonaws.com/about-us.png?AWSAccessKeyId=...&Signature=...&Expires=...
+# Ye URL 1 ghante (3600 sec) ke liye valid rahega
+```
+
+**Solution 2 — File copy karo:**
+```bash
+aws s3 cp s3://werdfgas34/about-us.png ./
+```
+
+**Solution 3 — Bucket/S3 ko public karo (risky):**
+- Console → bucket → Permissions → Block Public Access → OFF karo
+- Bucket Policy me public read permission do:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": "*",
+    "Action": "s3:GetObject",
+    "Resource": "arn:aws:s3:::werdfgas34/*"
+  }]
+}
+```
+⚠️ Public karne se koi bhi object access kar sakta hai — sirf static websites ya public files ke liye karo.
+
+## CloudFront (CDN)
+
+AWS CloudFront ek **Content Delivery Network (CDN)** service hai jo static/dynamic content ko **Edge locations** (duniya bhar ke servers) se serve karta hai. Ye user ke nearest location se content deliver karta hai — jisse **latency** (speed) improve hoti hai.
+
+**Example — amazon.com:**
+Jab aap amazon.com kholte hain:
+1. Amazon ka content (images, CSS, JS, product pages) CloudFront pe deploy hai
+2. Agar aap India me hain to CloudFront **Mumbai Edge location** se serve karega
+3. User in US ko **Virginia ya Oregon** Edge se serve hoga
+4. Jo content already cached hai wo turant milta hai, jo nahi hai wo origin (S3/EC2) se fetch ho k cache ho jata hai
+
+**CloudFront vs S3 direct:**
+| Feature | S3 Direct | CloudFront + S3 |
+|---------|-----------|----------------|
+| Speed | Sirf us region se | Nearest edge se worldwide |
+| Latency | High (door ke users ke liye) | Low (edge location se) |
+| Cost | Data transfer charges | Thoda zyada but faster |
+| DDoS protection | Limited | Built-in (AWS Shield) |
+| Caching | ❌ | ✅ (edge pe cache karta hai) |
+
+**Key features:**
+- **Edge locations** — 600+ points of presence worldwide
+- **Origin** — S3, EC2, ALB, ya external server ho sakta hai
+- **Caching** — frequently accessed content edge pe store hota hai
+- **TTL** — cache kitni der valid rahega (sec/min/hours)
+- **Geo-restriction** — specific countries ko allow/block karna
+- **Custom SSL** — apna domain aur SSL certificate (CloudFront se HTTPS)
+- **DDoS protection** — AWS Shield + AWS WAF integrated
+- **Lambda@Edge** — edge location pe code run karna (like URL rewrite, auth)
+
+**Behaviour:**
+- User request → nearest edge location → agar cached hai to serve karo
+- Agar cached nahi hai → origin se fetch karo → cache karo → user ko do
+
+**Price:**
+- Data transfer out (per GB)
+- Request count (HTTP/HTTPS)
+- Regional pricing (India/SA/US — alag alag rates)
+
+## Load Balancer (ELB - Elastic Load Balancer)
+
+AWS Load Balancer ek **traffic distributer** hai jo incoming requests ko multiple servers (EC2 instances) me automatically distribute karta hai.
+
+**Example — amazon.com:**
+Amazon ke lakhon users ek saath aate hain:
+1. Ek server sab handle nahi kar sakta — isliye Amazon ke **1000+ servers** hain
+2. Load Balancer sab requests leta hai aur **healthy servers** ko bhejta hai
+3. Agar ek server fail ho jaye to Load Balancer automatically usko hatakar doosre server pe request bhejta hai
+4. User ko pata bhi nahi chalta — ek hi server se baat kar rahe hain jaise lagta hai
+
+**Load Balancer kyun chahiye?**
+- **High traffic handle** — ek server pe load nahi aane deta
+- **High availability** — ek server down ho to doosra sambhal leta hai
+- **Fault tolerance** — failed instances ko hatakar naye healthy instances pe bhejta hai
+- **Auto Scaling** — naye EC2 instances aate hi automatically unme bhi traffic bhejne lagta hai
+- **Health checks** — har server ko ping karta hai, jo fail ho usko rotation se hata deta hai
+
+**Types of Load Balancers:**
+
+| Type | Protocol | Use Case |
+|------|----------|----------|
+| **ALB (Application LB)** | HTTP/HTTPS/gRPC | Web apps, microservices, path-based routing |
+| **NLB (Network LB)** | TCP/UDP | High performance, low latency, static IP |
+| **GWLB (Gateway LB)** | IP | Third-party appliances (firewalls, IDS/IPS) |
+
+**ALB vs NLB — kab kya use karein?**
+
+| Feature | ALB | NLB |
+|---------|-----|-----|
+| Layer | Layer 7 (Application) | Layer 4 (Transport) |
+| Content-based routing | ✅ (path, host, headers) | ❌ |
+| Path routing (`/api/*`, `/images/*`) | ✅ | ❌ |
+| Host routing (`api.example.com`) | ✅ | ❌ |
+| Static IP | ❌ | ✅ (Elastic IP assign) |
+| Latency | Slight delay (reads headers) | Minimal (high speed) |
+| WebSockets | ✅ | ❌ |
+| gRPC | ✅ | ❌ |
+| TLS termination | ✅ | ✅ |
+| Target groups | EC2, Lambda, IP, ALB | EC2, IP, ALB |
+
+**Components:**
+
+- **Listener** — Load Balancer ka "ear" — ek port aur protocol sunta hai (jaise HTTP:80, HTTPS:443)
+- **Target Group** — servers ka group jahan traffic bhejna hai (jaise 5 EC2 instances)
+- **Health Check** — har `n` seconds pe target group ke instances ko ping karta hai
+- **Rules** — ALB me decide karta hai kaunsi request kahan jayegi (path/host based)
+
+**Example setup — Web app with ALB:**
+
+```
+Users → ALB (HTTPS:443) → Target Group (EC2 instances)
+                              ├── EC2 #1 (Healthy)
+                              ├── EC2 #2 (Healthy)
+                              └── EC2 #3 (Unhealthy → removed)
+```
+
+**ALB Routing Rules — real-world example:**
+
+| Rule | Condition | Action |
+|------|-----------|--------|
+| 1 | IF path starts with `/api/*` | Forward to **API Target Group** |
+| 2 | IF host is `images.example.com` | Forward to **Image Server TG** |
+| 3 | IF path is `/login` | Forward to **Auth TG** |
+| 4 | ELSE (default) | Forward to **Web App TG** |
+
+**Sticky Sessions (Session Affinity):**
+- Load Balancer normally requests randomly distribute karta hai
+- Sticky session ON karne par ek user ki **saari requests same server** pe jaati hain
+- Cookie-based kaam karta hai — ALB ek cookie set karta hai aur ussi server pe bhejta rehta hai
+- Use case: Shopping cart — user ka cart jis server pe bana, wahi server handle kare
+
+**Cross-Zone Load Balancing:**
+- Normally ALB sirf apne AZ ke instances ko traffic bhejta hai
+- Cross-zone ON karne par ALB **saare AZs** ke instances me equally distribute karta hai
+- Better utilization — ek AZ me 10 instances aur doosre me 2 hain to bhi load barabar batega
+
+**Connection Draining (Deregistration Delay):**
+- Jab EC2 instance deregister/down ho raha ho to Load Balancer usko **turant nahi hatata**
+- Existing connections ko khatam hone ka time deta hai (default 300 sec)
+- Nayi requests nahi aayengi, purani puri ho jayengi — **zero downtime**
+
+**Setup Steps (ALB):**
+
+1. **Target Group banao**
+   - AWS Console → EC2 → Target Groups → "Create target group"
+   - Target type: Instances / IP / Lambda
+   - Protocol: HTTP, port: 80
+   - Health check path: `/health` (ya `/`)
+   - Healthy threshold: 2 (2 success = healthy)
+   - Unhealthy threshold: 2 (2 fail = unhealthy)
+   - Register EC2 instances isme
+
+2. **Load Balancer banao**
+   - EC2 → Load Balancers → "Create Load Balancer" → ALB select karo
+   - Scheme: **Internet-facing** (public) ya **Internal** (private VPC)
+   - IP address type: IPv4 ya Dualstack (IPv4 + IPv6)
+   - VPC aur subnets select karo (at least 2 AZs)
+   - Security group assign karo (allow HTTP/HTTPS)
+
+3. **Listener configure karo**
+   - HTTP:80 ya HTTPS:443
+   - Default action → Target group forward karo
+
+4. **Route 53 me DNS add karo**
+   - ALB ka DNS name hota hai (jaise `my-alb-12345.us-east-1.elb.amazonaws.com`)
+   - Route 53 me A record banao → **Alias** select karo → ALB select karo
+   - Ab `example.com` ALB pe point karega
+
+5. **Auto Scaling group attach karo** (optional)
+   - Auto Scaling group ke saath ALB attach kar sakte hain
+   - Naye instances aate hi ALB automatically unme traffic bhejta hai
+   - Old instances jate hi ALB hatata hai
+
+**Important Points:**
+- ALB ka **fixed DNS name** hota hai, IP nahi — isliye Route 53 me Alias record use karo
+- ALB **public subnet** me hota hai (internet-facing) ya **private subnet** me (internal)
+- Load Balancer ke saath **Auto Scaling** + **Multi-AZ** best practice hai
+- SSL certificate ALB pe terminate karo (ALB se EC2 tak HTTP bhej sakte hain)
+
+## API Gateway
+
+AWS API Gateway ek **fully managed API service** hai jo developers ke liye REST/WebSocket APIs create, publish, maintain, monitor aur secure karna easy banati hai. Ye **serverless** hai — aapko koi server manage nahi karna padta.
+
+**Example — amazon.com app:**
+Amazon ka mobile app jab kuch data mangata hai:
+1. App API Gateway ko request bhejta hai: "mujhe product details chahiye"
+2. API Gateway request validate karta hai, rate limit check karta hai
+3. Fir request ko **Lambda function** (ya EC2/any backend) pe forward karta hai
+4. Lambda response deta hai → API Gateway usse format karta hai → app ko bhejta hai
+
+**API Gateway vs Load Balancer — difference:**
+
+| Feature | API Gateway | Load Balancer (ALB) |
+|---------|-------------|-------------------|
+| Layer | API management | Traffic distribution |
+| Protocol | REST, WebSocket, HTTP | HTTP, TCP, UDP, gRPC |
+| Rate limiting | ✅ | ❌ (ALB nahi karta) |
+| API keys / Usage plans | ✅ | ❌ |
+| Request/Response transformation | ✅ | ❌ |
+| Caching | ✅ | ❌ (CloudFront ke saath) |
+| Authentication (Cognito, JWT, Lambda authorizer) | ✅ | ❌ (ALB bhi auth kar sakta hai via OIDC) |
+| WAF integration | ✅ | ✅ |
+| SDK generation | ✅ | ❌ |
+| Throttling | ✅ | ❌ |
+| Monitoring (per-API metrics) | ✅ | ❌ (basic metrics) |
+
+**API Gateway use cases:**
+- **Serverless APIs** — Lambda ke saath REST API banao — koi server nahi, auto-scale
+- **API proxy** — existing backend (EC2, on-prem) ke aage proxy laga do — rate limit, auth, caching
+- **WebSocket APIs** — real-time apps (chat, notifications, live streaming)
+- **API monetization** — API keys + usage plans → developers ko API becho
+
+**API Gateway types:**
+
+| Type | Use Case |
+|------|----------|
+| **REST API** | Traditional REST APIs, full control over request/response |
+| **HTTP API** | Simple, low-latency, cheaper — Lambda/HTTP backends ke liye |
+| **WebSocket API** | Real-time bidirectional communication |
+
+**HTTP API vs REST API — kab kya?**
+
+| Feature | HTTP API | REST API |
+|---------|----------|----------|
+| Price | ~50% cheaper | Zyada |
+| Latency | Lower | Slightly higher |
+| Custom domain | ✅ | ✅ |
+| API keys / Usage plans | ❌ | ✅ |
+| Request validation | Basic | Advanced |
+| WAF | ✅ | ✅ |
+| Lambda authorizer | ✅ | ✅ |
+| Cognito | ✅ | ✅ |
+| API Gateway caching | ❌ | ✅ |
+
+**Components:**
+
+- **API** — aapki API definition (endpoints, methods, integrations)
+- **Resource** — URL path (jaise `/products`, `/users/{id}`)
+- **Method** — GET, POST, PUT, DELETE, PATCH
+- **Integration** — backend se connect karna:
+  - **Lambda function** (serverless)
+  - **HTTP** (EC2, ALB, any HTTP endpoint)
+  - **AWS service** (SQS, DynamoDB, Step Functions, Kinesis)
+  - **VPC Link** (private VPC resources)
+  - **Mock** (test response bina backend ke)
+- **Stage** — deployment stage (dev, test, prod — alag URLs milte hain)
+- **API Key** — developer ko API access dene ke liye
+- **Usage Plan** — rate limit aur quota set karna (1000 req/hour)
+- **Authorizer** — authentication (Cognito, JWT, Lambda)
+
+**Example — Serverless REST API setup:**
+
+```
+Mobile App / Web
+     ↓
+API Gateway (REST API)
+     ↓  (Lambda integration)
+Lambda Function (business logic)
+     ↓
+DynamoDB (database)
+```
+
+**API Gateway endpoints:**
+
+1. **Edge-optimized** — CloudFront ke through serve hota hai, worldwide users ke liye best
+2. **Regional** — ek region me serve hota hai, apna CDN khud banao (CloudFront manually)
+3. **Private** — sirf VPC ke andar accessible, public internet se nahi
+
+**Rate limiting aur throttling:**
+- **Per-client throttle** — har API key ke liye limit (jaise 100 req/sec)
+- **Account-level throttle** — total API Gateway usage limit (jaise 10,000 req/sec)
+- **Burst limit** — sudden traffic spike handle karne ke liye extra capacity (jaise 5000 req/sec burst)
+- **429 Too Many Requests** — limit cross karne par ye error aata hai
+
+**Caching:**
+- API Gateway **TTL-based caching** support karta hai (default 300 sec)
+- Cache hit → backend call nahi hoti, directly response milta hai
+- Cache size: 500MB to 237GB
+- Cache individual endpoints, query parameters ke saath bhi
+
+**Setup steps — REST API with Lambda:**
+
+1. **Lambda function banao**
+   - AWS Console → Lambda → "Create function"
+   - Runtime: Node.js, Python, etc.
+   - Code likho jo event.body process kare aur response return kare
+
+2. **API Gateway banao**
+   - API Gateway → "Create API" → REST API → "Build"
+   - Protocol: REST
+   - "New API" select karo, name do
+
+3. **Resource aur Method banao**
+   - "Create Resource" → path daalo (jaise `/users`)
+   - "/users" select karo → "Create Method" → GET
+   - Integration type: Lambda Function
+   - Lambda function select karo
+
+4. **Request/Response transform karo** (optional)
+   - **Mapping templates** — backend ke response ko API client ke format me badlo
+   - Jaise: Lambda se `{statusCode: 200, body: "..."}` aata hai, API Gateway sirf body bhejta hai
+
+5. **CORS enable karo** (web apps ke liye zaroori)
+   - "Enable CORS" → allow origins, methods, headers
+   - OPTIONS method automatically create ho jata hai
+
+6. **Deploy karo**
+   - "Deploy API" → naya stage banao (jaise `prod`)
+   - Invoke URL milta hai: `https://abc123.execute-api.us-east-1.amazonaws.com/prod/users`
+   - URL directly browser ya app me use kar sakte ho
+
+7. **Custom domain aur SSL lagaao** (production ke liye)
+   - Route 53 me domain point karo
+   - API Gateway → Custom Domain → Certificate lagaao
+   - `https://api.example.com/prod/users` — ab aisa dikhega
+
+8. **API Key aur Usage Plan banao** (optional)
+   - Usage Plan banao → rate limit (100 req/sec), quota (10000 req/day)
+   - API Key generate karo → usage plan se attach karo
+   - Developers ko API key do → wo request me `x-api-key` header bhejenge
+   - API Gateway key validate karega, limit cross hui to 429 dega
+
+**Important Points:**
+- API Gateway ka **default timeout 29 seconds** hai — longer operations ke liye async pattern use karo
+- Request body max size **10MB** (REST), **4MB** (HTTP API)
+- Lambda cold start + API Gateway latency ka **dhyan rakho** — warmup strategy use kar sakte ho
+- **Edge-optimized** API endpoint automatic CloudFront use karta hai — alag se CDN nahi lagna padta
+- API Gateway pe **WAF attach** kar sakte ho — SQL injection, XSS, DDoS protection
+- `$default` stage — default URL pe requests kisi bhi URL path se aa sakti hain (catch-all)
+
+## AWS WAF (Web Application Firewall)
+
+WAF ek **firewall** hai jo aapki web app ko **common web attacks** se bachata hai — jaise SQL injection, XSS, aur bad bots.
+
+**Example — Amazon checkout page:**
+Koi hacker aapke checkout page pe SQL injection try karta hai:
+```
+POST /checkout  body: "user_id=1; DROP TABLE orders"
+```
+1. Request pehle **WAF** pe aati hai
+2. WAF check karta hai — "yeh SQL injection dikhta hai"
+3. WAF request **block** kar deta hai
+4. Hacker ko **403 Forbidden** error milta hai
+5. Aapka backend safe rehta hai
+
+**WAF kaise kaam karta hai?**
+- Aap **rules** banate ho — "kya allow karna hai, kya block karna hai"
+- WAF har incoming request ko in rules se match karta hai
+- Match mila to → Allow / Block / Count (sirf count karo, block mat karo)
+
+**Common WAF Rules:**
+| Rule | Kya karta hai |
+|------|--------------|
+| SQL Injection | Request me SQL code hai to block |
+| XSS (Cross-Site Scripting) | Request me malicious JS hai to block |
+| IP rate limiting | Ek IP se 100 req/sec se zyada aaye to block |
+| Geo-block | Specific countries se request block |
+| Bad bots | Scrapers, crawlers ko block |
+| Size limit | Request body 10KB se bada ho to block |
+
+**WAF kahan lagate hain?**
+- **CloudFront** ke saath (most common)
+- **ALB** ke saath
+- **API Gateway** ke saath
+- **AppSync** ke saath
+
+**WAF vs ALB Security Group:**
+
+| Feature | Security Group | WAF |
+|---------|---------------|-----|
+| Layer | Network (Layer 3/4) | Application (Layer 7) |
+| Block by | IP, port, protocol | SQL injection, XSS, bot, URI path |
+| Analogy | **Gatekeeper** — kaun andar aa sakta hai | **Bouncer** — andar aane ke baad kya kar sakta hai |
+
+## AWS Shield
+
+Shield ek **DDoS protection** service hai jo aapki app ko **DDoS attacks** se bachati hai. DDoS = jab hacker lakhons fake requests bhej kar server ko crash karne ki koshish kare.
+
+**Example — Amazon par DDoS attack:**
+Koi hacker group Amazon par attack karta hai:
+1. 1,00,000 hacked computers ek saath Amazon ko request bhejna shuru karte hain
+2. **Shield** automatically attack detect karta hai — "yeh normal traffic nahi hai"
+3. Shield malicious traffic **filter out** karta hai
+4. Real users ka traffic normally flow karta rehta hai
+5. Amazon ka server **down nahi hota**, sab normal chalta hai
+6. Hacker fail ho jata hai
+
+**Shield — 2 versions:**
+
+| Feature | Shield Standard (Free) | Shield Advanced ($3000/month) |
+|---------|----------------------|------------------------------|
+| Price | **Free** — automatically on | Paid + 1 year commit |
+| DDoS protection | Basic (Layer 3/4) | Advanced (Layer 3/4/7) |
+| Coverage | Route 53, CloudFront | Route 53, CloudFront, ALB, NLB, EC2, Global Accelerator |
+| 24/7 support | ❌ | ✅ (DDoS Response Team - DRT) |
+| Cost protection | ❌ | ✅ (attack ke time scale hua to AWS bill waive karta hai) |
+| Real-time visibility | Basic | Advanced (CloudWatch metrics, attack logs) |
+
+**Shield Standard (Free) kya karta hai:**
+- Har AWS account ko automatically milta hai
+- Route 53 aur CloudFront pe basic DDoS protection
+- Network layer attacks se bachata hai (SYN floods, UDP floods)
+- Kuch configure nahi karna padta — **auto ON**
+
+**Shield Advanced kab lo?**
+- Production app hai jiska downtime **costly** hai
+- Pehle DDoS attack aa chuka hai
+- 24/7 AWS expert support chahiye (DRT)
+- EC2, ALB, NLB ko bhi protect karna hai
+
+**WAF + Shield — real-world scenario:**
+
+```
+Internet
+   ↓
+Shield (DDoS protection — bad traffic filter)
+   ↓
+WAF (SQL injection, XSS, bots block)
+   ↓
+CloudFront / ALB / API Gateway
+   ↓
+Backend (EC2 / Lambda)
+```
+
+**Analogy:**
+- **Shield** = **Gate security** — bahar se aane wale **huge crowd** ko control karta hai
+- **WAF** = **Security check post** — andar aane ke baad **kisne kya weapon** chhupa rakha hai check karta hai
+
+**Simple difference:**
+| Service | Kya attack rokta hai? |
+|---------|----------------------|
+| Shield | **Volume attack** — lakhon fake requests jo server ko overload karein |
+| WAF | **Application attack** — SQL injection, XSS jo data chura sake |
+
+## ACM (AWS Certificate Manager)
+
+ACM ek **free SSL/TLS certificate** dene wali service hai jo AWS services ke saath automatically integrate ho jati hai. Aapko manually certificate buy, install ya renew nahi karna padta.
+
+**Example — Amazon pe HTTPS:**
+Jab aap `https://amazon.com` kholte hain:
+1. Browser check karta hai — "kya ye site secure hai?"
+2. Amazon ka SSL certificate browser ko batata hai — "haan, main genuine Amazon hoon"
+3. Aapke browser aur Amazon ke beech **encrypted connection** banta hai
+4. Koi hacker beech me data nahi padh sakta
+5. Ye certificate **ACM** jaise service se aata hai
+
+**Example — apni website pe HTTPS lagaana:**
+Maano aapne `shop.example.com` ek ALB pe host kiya hai:
+1. **Pehle:** Users ko `http://shop.example.com` pe chodna padta (Not Secure dikhta hai)
+2. **ACM me:** `shop.example.com` ka SSL certificate request karo
+3. **ALB me:** Certificate attach karo
+4. **Ab:** Users `https://shop.example.com` pe secure aate hain (lock icon ✅)
+5. ACM **auto-renew** bhi karega — kabhi expire nahi hoga
+
+**ACM — kya free hai, kya nahi?**
+
+| | ACM (public) | Third-party (DigiCert, GoDaddy, etc.) |
+|--|------------|--------------------------------------|
+| Price | **Free** | ~$50-$1000/year |
+| Renewal | **Auto** (ACM karega) | Manual |
+| AWS integration | **Seamless** (ALB, CloudFront, API Gateway) | Manual upload |
+| Validation | DNS ya Email | Domain owner verify karna padta hai |
+
+**Certificate kaise request karte hain?**
+
+1. **Request certificate**
+   - ACM → "Request certificate" → "Public certificate"
+   - Domain name daalo: `shop.example.com`
+
+2. **Validation karo** (proof ki domain aapki hai)
+   - **DNS validation (recommended):** Route 53 me ek CNAME record automatic add kar do
+   - **Email validation:** Certificate wali team domain owner ke email pe verification bhejegi
+
+3. **Certificate issue ho jata hai** (generally 5-10 min)
+
+4. **Use karo** — certificate ko attached karo:
+   - **ALB** → Listeners → HTTPS:443 → Certificate select karo
+   - **CloudFront** → Custom SSL Certificate → Select karo
+   - **API Gateway** → Custom Domain → Certificate select karo
+
+**Important Points:**
+- ACM certificates **sirf us region me** use ho sakte hain jahan request kiye ho
+- **Exception:** CloudFront ke liye certificate **us-east-1 (N. Virginia)** me hona chahiye
+- Public certificates **free** hain — private (internal) certificates ke liye **Private CA** chahiye
+- Certificate **auto-renew** hota hai — jab tak DNS record hataya nahi gaya
+- **ACM se private key kabhi download nahi kar sakte** — sirf AWS services pe use kar sakte ho
+- **Multiple domains** — ek certificate me `*.example.com` (wildcard) + `example.com` dono add kar sakte ho
+
+## Cognito
+
+AWS Cognito ek **authentication (login/signup) + authorization (permissions) service** hai. Ye aapki app ke liye user management handle karti hai — aapko khud login system banana nahi padta.
+
+**Example — Amazon ka login:**
+Jab aap amazon.com pe signup karte hain:
+1. **Sign up** — apna email/password daalte ho
+2. **Email verification** — Amazon aapko OTP bhejta hai
+3. **Login** — baar baar email/password se login karte ho
+4. **Forgot password** — "forgot password?" click karte ho, reset link aata hai
+5. **Third-party login** — "Sign in with Google/Facebook" bhi kar sakte ho
+
+Ye sab Cognito out-of-the-box provide karta hai. Khud banana padta to months lagte.
+
+**Cognito — 2 main parts:**
+
+| Part | Kya karta hai |
+|------|-------------|
+| **User Pool** | User directory + signup/login UI + email verification + forgot password |
+| **Identity Pool** | Temporary AWS credentials dena (users ko S3, DynamoDB access dene ke liye) |
+
+### User Pool
+
+User Pool ek **user database** hai jisme users store hote hain.
+
+**Key features:**
+- **Sign up / Sign in** — koi bhi user register/login kar sakta hai
+- **Email/Phone verification** — OTP ya link se verify
+- **MFA** — OTP ya authenticator app (Google Authenticator)
+- **Forgot password** — auto reset flow
+- **Custom fields** — apne hisaab se fields add karo (jaise `favourite_genre`)
+- **Hosted UI** — Cognito khud ka login page deta hai (custom domain bhi laga sakte ho)
+- **Social login** — Google, Facebook, Apple, Amazon se login
+- **SAML/OpenID** — corporate login (Azure AD, Okta, etc.)
+
+**Setup steps — User Pool:**
+
+1. **User Pool banao**
+   - Cognito → "Create user pool"
+   - Sign-in options: Email / Phone / Username (or sab)
+   - Password policy set karo
+
+2. **Verification configure karo**
+   - Email verification: Auto (Cognito SES use karta hai) ya Custom (apna email provider)
+   - Phone verification: SMS (Amazon SNS se bhejta hai)
+
+3. **Hosted UI enable karo**
+   - "Hosted authentication pages" → ON
+   - App client banao (web ya mobile app)
+   - Callback URL daalo (jaise `https://myapp.com/callback`)
+
+4. **App client set karo**
+   - **Confidential client** — server-side app (Node.js, Django) — client secret hota hai
+   - **Public client** — frontend app (React, Android, iOS) — client secret nahi hota
+
+5. **App me SDK integrate karo**
+   - **Amplify** (React/React Native/Flutter)
+   - **Cognito SDK** (Node.js, Python, Java, Go)
+   - **AWSCognitoIdentityProvider** API
+
+**Hosted UI example:**
+```
+User → "Login" click → Cognito Hosted UI pe redirect → Login karo → Callback URL pe aao
+```
+Aapko sirf redirect handle karna hai — login page, forgot password, MFA sab Cognito sambhalta hai.
+
+### Identity Pool
+
+Identity Pool AWS resources ka access dene ke liye hai — users ko **temporary AWS credentials** (access key + secret key + session token) deta hai.
+
+**Example — profile photo upload:**
+1. User app me login karta hai (User Pool)
+2. App **Identity Pool** se temporary credentials leta hai
+3. Ab user directly **S3 bucket** me profile photo upload kar sakta hai
+4. Aapne backend ki zaroorat nahi padi — frontend se directly S3 me file gaya
+
+**Flow:**
+```
+User Login → Cognito User Pool (authenticate)
+         ↓
+Cognito Identity Pool (temporary AWS credentials)
+         ↓
+User ab S3/DynamoDB/API Gateway access kar sakta hai
+```
+
+**Setup steps — Identity Pool:**
+
+1. **Identity Pool banao**
+   - Cognito → "Identity Pools" → "Create"
+   - Name do
+
+2. **Auth provider connect karo**
+   - **Cognito User Pool** — aapka User Pool select karo
+   - **Public providers** — Google, Facebook, Apple
+   - **OpenID / SAML** — koi bhi identity provider
+
+3. **IAM roles set karo**
+   - **Authenticated role** — login users ke liye permissions (jaise S3 read)
+   - **Unauthenticated role** — guest users ke liye limited access
+   - Ye roles baad me IAM me edit kar sakte ho
+
+4. **App me use karo**
+   - Amplify ya AWS SDK se Identity Pool se credentials fetch karo
+   - S3 upload, DynamoDB query — sab frontend se directly
+
+**User Pool vs Identity Pool — simple difference:**
+| | User Pool | Identity Pool |
+|---|-----------|---------------|
+| Kaam | **Login karo** (who are you?) | **Access do** (what can you do?) |
+| Store kya karta hai | Username, password, email | Kuch nahi (temporary credentials deta hai) |
+| Output | JWT token (ID + Access + Refresh) | Temporary AWS creds (Access Key + Secret + Session) |
+| Analogy | **ID card** — pehchaan patrika | **Entry pass** — andar kahan kahan ja sakte ho |
+
+**Cognito triggers (Lambda customisation):**
+Cognito Lambda functions ko trigger kar sakta hai — apni custom logic laga sakte ho:
+
+| Trigger | Kab chalega |
+|---------|------------|
+| Pre Sign-up | Signup se pehle — manual approval, email domain check |
+| Post Confirmation | User verified ho jane ke baad — user ko DynamoDB me save karo |
+| Pre Authentication | Login se pehle — IP block karo, account check |
+| Post Authentication | Login ke baad — login history log karo |
+| Custom Message | Email/SMS template customize karo |
+| Define Auth Challenge | Custom auth challenge (CAPTCHA, pattern lock, etc.) |
+| Create Auth Challenge | Challenge generate karo |
+| Verify Auth Challenge | User ka response verify karo |
+
+**Analogy — poora flow:**
+```
+[User] → Sign Up → User Pool (user save ho gaya)
+   → Email verify → OTP check
+   → Login → User Pool JWT token deta hai
+   → Profile photo upload → Identity Pool se S3 credentials liye
+   → S3 me photo upload kiya (bina backend ke!)
+```
+
+## EC2 (Elastic Compute Cloud)
+
+EC2 ek **virtual server** hai jo cloud me chalta hai. Aap apna computer ki tarah ise use kar sakte ho — app run karo, website host karo, background processing karo.
+
+**Example — Amazon ka product listing server:**
+Amazon ke har product page ke peeche ek EC2 instance hai jo:
+1. Database se product details fetch karta hai
+2. HTML page generate karta hai
+3. User ko response bhejta hai
+
+**EC2 key points:**
+- **OS** — Windows, Linux (Amazon Linux, Ubuntu, RedHat) choose karo
+- **Instance types**:
+  - **t2.micro / t3.micro** — small, free tier (testing)
+  - **m5.large** — general purpose (web servers)
+  - **c5.2xlarge** — compute optimized (CPU heavy)
+  - **r5.large** — memory optimized (large databases)
+- **Pricing models:**
+  - **On-Demand** — per second pay (flexible, expensive for 24x7)
+  - **Reserved** — 1/3 year commit (cheaper, ~40% save)
+  - **Spot** — unused capacity at 90% discount (can be terminated anytime)
+
+**How it works:**
+```
+EC2 Instance (t2.micro, Ubuntu, 8GB storage)
+   ├── Web server (Apache/Nginx) → HTTP requests handle
+   ├── App server (Node.js/Python/Java) → business logic
+   └── Database (MySQL/PostgreSQL) → data store
+```
+
+**Analogy:** Apna ek **personal computer** hai jo 24x7 chalta hai, kisi bhi size ka le sakte ho, aur jab chaho band kar do.
+
+## Lightsail
+
+Lightsail AWS ka **simplified, fixed-price VPS** hai. Ye un logo ke liye hai jinhe EC2 ki complexity nahi chahiye — bas ek simple server chahiye fixed monthly price me.
+
+**Example — chhoti blog/website:**
+Aap ek personal blog host karna chahte ho:
+- **EC2 se:** VPC, security groups, IAM roles, subnets — sab configure karna padega
+- **Lightsail se:** `$5/month` ka plan lo → WordPress install karo → blog ready in 5 min
+
+**Lightsail vs EC2:**
+
+| Feature | Lightsail | EC2 |
+|---------|-----------|-----|
+| Setup | Simple — 5 min | Complex — networking, security groups |
+| Pricing | **Fixed monthly** ($3.50 to $160) | Per second, variable |
+| VPC | Built-in (auto) | Manual |
+| Scaling | Manual (bigger plan le lo) | Auto-scaling groups |
+| Best for | Small apps, blogs, dev projects | Production, large scale, complex apps |
+| Analogy | **Hostel room** — sab included, limited size | **Apna ghar** — full freedom, sab khud manage |
+
+**Key features:**
+- Fixed pricing — predictable bill
+- Pre-configured apps: WordPress, Node.js, LAMP, MEAN, Magento
+- Built-in monitoring, backups, DNS management
+- Can be upgraded to EC2 later if needed
+
+**When to use Lightsail vs EC2:**
+- **Lightsail:** Pet project, learning, small business website, $5-$20/month budget
+- **EC2:** Production app, auto-scaling, complex networking, compliance requirements
+
+## ECS (Elastic Container Service)
+
+ECS ek **container orchestration** service hai jo Docker containers ko run karti hai. Aapko servers manage nahi karne padte — bas container defin karo, ECS chalayega.
+
+**Example — Amazon ka microservices architecture:**
+Amazon ki app alag-alag chhoti services se bani hai:
+- Search service (ek container)
+- Cart service (doosra container)
+- Payment service (teesra container)
+- Recommendation service (chauta container)
+ECS in sab containers ko manage karta hai — kaunsa container kahan chalega, kisko restart karna hai, kaise scale karna hai.
+
+**Key concepts:**
+- **Task Definition** — container ka blueprint (image, port, CPU, memory)
+- **Task** — ek running container (ya container group)
+- **Service** — ensures X containers always running (auto-heal + load balancer integration)
+- **Cluster** — ECS ka logical group jahan tasks chalte hain
+- **Container image** — Docker image stored in **ECR (Elastic Container Registry)**
+
+**What does orchestration mean?**
+```
+Aap define karte ho: "Mujhe 5 containers chahiye, har ek 512MB RAM, port 3000"
+ECS automatically:
+   1. Containers start karta hai
+   2. Monitor karta hai — healthy ya nahi
+   3. Koi fail hua to naya start karta hai
+   4. Load increase hui to scale up karta hai
+   5. Update aaya to rolling deploy karta hai
+```
+
+**Analogy:** ECS = **Property manager** — aap building owner ho, manager sab tenants (containers) ka dhyan rakhta hai.
+
+## Fargate
+
+Fargate ECS ka **serverless** version hai. ECS me aap servers manage karte ho (EC2 instances), Fargate me aap sirf container dete ho — baaki sab AWS sambhalta hai.
+
+**Example — API backend:**
+Aapne Node.js ka API banaya hai Docker me:
+- **ECS (EC2):** Pehle EC2 instance launch karo, uske baad container uspe chalao — server ka dhyan rakhna padega
+- **Fargate:** Simply container define karo → Fargate chala dega → koi server nahi dikhta
+
+**ECS (EC2 launch type) vs Fargate:**
+
+| Feature | ECS (EC2) | ECS (Fargate) |
+|---------|-----------|---------------|
+| You manage | EC2 instances, scaling, patches | **Nothing** — sirf container |
+| AWS manages | Nothing | Servers, OS, patches |
+| Pricing | EC2 cost (24x7) | Per **task per second** |
+| Best for | Large workloads, predictable cost | Variable traffic, simplicity |
+| Cold start | ❌ (server already running) | ✅ (container start hota hai) |
+
+**Fargate pricing example:**
+- 1 container, 512MB RAM, 0.25 vCPU, 1 hour run
+- Cost: ~$0.012/hour (server ka bill nahi, sirf container ka)
+
+**Analogy:**
+- **ECS (EC2):** Khud ka **flat** liya hai — furniture khud lao, maintenance khud karo
+- **Fargate:** **Hotel room** book kiya — sirf aap ka samaan lao (container), baaki sab hotel sambhalta hai
+
+## EKS (Elastic Kubernetes Service)
+
+EKS ek **managed Kubernetes** service hai. Kubernetes containers orchestrate karne ka industry-standard tool hai, aur EKS usko AWS pe manage karta hai.
+
+**Example — Netflix ka multi-service architecture:**
+Netflix 500+ microservices chalat hai — recommendation, streaming, billing, user profile, etc.
+- EKS Kubernetes cluster chalata hai
+- Kubernetes decide karta hai kaunsa container kaha chalega
+- Auto-scaling, self-healing, rolling updates — sab Kubernetes karta hai
+
+**ECS vs EKS — kab kya use karein?**
+
+| Feature | ECS | EKS |
+|---------|-----|-----|
+| AWS specific | ✅ (only AWS) | ❌ (portable — GKE, AKS bhi chal sakta hai) |
+| Complexity | **Simple**, AWS integrated | **Complex** — steep learning curve |
+| Community | AWS specific | Huge — open source, multi-cloud |
+| Features | Basic but enough | Advanced (service mesh, operators, CRDs) |
+| When to use | Dono AWS ho, simplicity chahiye | Multi-cloud, complex deployments, K8s expertise ho |
+
+**Key Kubernetes concepts:**
+- **Pod** — smallest unit (1+ containers)
+- **Deployment** — desired state defines (5 replicas, image: v2)
+- **Service** — stable endpoint (load balancer pods ke aage)
+- **ConfigMap / Secret** — config injection
+- **Ingress** — external access (like API Gateway)
+
+**Analogy:** Kubernetes = **Ship captain** — jahaz (servers) aur container dock workers ko manage karta hai. EKS = **Captain hiring service** — AWS captain hire kar ke apne jahaz pe bhejta hai.
+
+## Lambda
+
+Lambda ek **serverless compute** service hai jo code tab chalati hai jab koi event trigger kare. Aapko server nahi khareedna, nahi manage karna — bas code upload karo, Lambda automatically chalayega.
+
+**Example — Amazon ki order confirmation email:**
+Jab aap Amazon pe kuch order karte hain:
+1. Order system se event aata hai
+2. **Lambda function trigger** hota hai
+3. Lambda email template bana kar **SES** (email service) ko bhejta hai
+4. User ko confirmation email chala jata hai
+5. Lambda ka kaam khatam — it shuts down
+6. Aapne koi server nahi khareeda, koi EC2 nahi chalaya
+
+**Example — Image upload automatic resize:**
+User apni photo S3 me upload karta hai:
+1. S3 pe file upload hoti hai (trigger)
+2. **Lambda function chalta hai**
+3. Lambda photo read karta hai, compress karta hai, resize karta hai
+4. Resized image wapas S3 me save karta hai
+5. Lambda band ho jata hai
+
+**Lambda key features:**
+- **Event-driven** — S3 upload, API Gateway call, DynamoDB change, scheduled (cron)
+- **Auto-scaling** — ek saath 1 ya 1000 Lambda instances chal sakte hain
+- **Pay per use** — sirf tab pay karo jab code chale (per 1ms + per request)
+- **Free tier** — 1M requests/month free, 400,000 GB-seconds free
+- **Limits** — max 15 min timeout, 10GB disk, 10,240MB memory
+- **Cold start** — pehli baar Lambda start hone me ~100ms-1sec lagta hai
+
+**Lambda vs EC2 vs ECS/Fargate:**
+
+| Feature | EC2 | ECS/Fargate | Lambda |
+|---------|-----|-------------|--------|
+| Management | Full control | Container level | **Zero** |
+| Duration | 24x7 | 24x7 | **Max 15 min** |
+| Scale | Manual / ASG | Manual / auto | **Instant auto** |
+| Startup | Always on | Always on | **Cold start** |
+| Price | Per hour | Per hour/per task | **Per ms** |
+| Use case | Long-running, stateful | Batch, microservices | **Short, event-driven** |
+| Analogy | **Khud ka restaurant** | **Cloud kitchen** | **Zomato delivery boy** — jab order aaye tab kaam kare |
+
+**Lambda triggers (kya kya Lambda chala sakta hai):**
+- S3 (file upload/delete)
+- API Gateway (HTTP request)
+- DynamoDB Streams (data change)
+- SQS / SNS (message queue)
+- CloudWatch Events (scheduled/cron)
+- Cognito (signup, login)
+- Alexa (skill kit)
+- CloudFront (Lambda@Edge)
+- Step Functions (workflow step)
+
+**Lambda use cases:**
+| Use case | Example |
+|----------|---------|
+| Image processing | Upload photo → compress + resize |
+| API backend | API Gateway + Lambda + DynamoDB |
+| File processing | S3 file → transform → save |
+| Cron jobs | Daily report generate karo |
+| Real-time processing | IoT data → process → store |
+| Notification | Order placed → email/SMS bhejo |
+
+## EBS (Elastic Block Store)
+
+EBS ek **block-level storage** volume hai jo EC2 instance ke saath attach hota hai. Jaise aapke laptop ki hard disk — waise hi EBS EC2 ka **local hard drive** hai.
+
+**Example — Amazon ka product listing server:**
+Amazon ka EC2 instance product details serve karta hai:
+1. EC2 instance chalta hai with **EBS volume** attached (100GB SSD)
+2. Is EBS pe OS (Ubuntu) installed hai
+3. Web server (Apache) aur code bhi yahi hai
+4. Product images bhi EBS pe store hote hain
+5. EC2 band kiya to data EBS me bacha rahta hai
+6. Dobara start kiya to wahi data available hai
+
+**EBS key features:**
+- **Persistent** — EC2 band/delete karo to bhi data safe
+- **Snapshots** — backup le sakte ho (S3 me stored, incremental)
+- **Encryption** — AES-256 encryption (free)
+- **Resize** — volume size increase kar sakte ho (downgrade nahi)
+- **Types:**
+  | Type | Use case | Max IOPS |
+  |------|----------|----------|
+  | gp3 (SSD) | General purpose, web servers | 16,000 |
+  | io2 (SSD) | High performance, databases | 256,000 |
+  | st1 (HDD) | Frequently accessed, big data | 500 |
+  | sc1 (HDD) | Cold data, backups | 250 |
+- **Max size** — 16TB per volume
+
+**EBS vs EC2 Instance Store:**
+| Feature | EBS | Instance Store |
+|---------|-----|---------------|
+| Data persists | ✅ EC2 stop/start ke baad bhi | ❌ EC2 stop hua to data gayab |
+| Backup | Snapshots | ❌ No backup |
+| Detach/Attach | ✅ Doosre EC2 me laga sakte ho | ❌ Fixed |
+| Speed | Fast | **Extremely fast** (physical server pe hai) |
+| Use case | Persistent storage, databases | Temporary data, cache |
+
+## EFS (Elastic File System)
+
+EFS ek **managed NFS (Network File System)** hai jo multiple EC2 instances ek saath access kar sakte hain. Jaise office ka shared network drive — sab computers ek hi file system access kar sakte hain.
+
+**Example — Amazon ke load balancer ke peeche servers:**
+Amazon ke 10 EC2 instances hain (load balancer ke peeche):
+1. Sabhi instances **same shared folder** access karte hain — EFS
+2. User koi bhi server pe jaye, same files dikhti hain
+3. Agar koi EC2 user upload/image add karta hai to sabhi instances immediately access kar sakte hain
+4. **No need to sync** files between servers — EFS handle karta hai
+
+**EFS key features:**
+- **Shared storage** — 1000s of EC2 ek saath connect ho sakte hain
+- **Auto-scaling** — file system automatically expand/shrink hota hai (pay for what you use)
+- **Multi-AZ** — multiple availability zones me accessible
+- **POSIX compliant** — Linux apps directly mount kar sakte hain (`sudo mount -t nfs4 ...`)
+- **Lifecycle management** — unused files automatically cheaper tier me move
+
+**EBS vs EFS — main difference:**
+
+| Feature | EBS | EFS |
+|---------|-----|-----|
+| Connection | **1 EC2** ek time pe (or multi-attach io2) | **1000s of EC2** ek saath |
+| Sharing | ❌ One-to-one | ✅ One-to-many |
+| Scope | **Single AZ** (same availability zone) | **Multi-AZ** (regional) |
+| Use case | OS disk, database | Shared files, web server content, media |
+| Analogy | **Laptop ki hard disk** — sirf apna computer use karega | **Office ka shared drive** — sab computers access kar sakte hain |
+| Backup | Snapshots (manual/auto) | EFS-to-EFS backup (AWS Backup) |
+| Price | GB-month (provisioned, pay even if empty) | GB-month (only what you use, auto-scale) |
+
+**When to use what?**
+| Scenario | Use |
+|----------|-----|
+| EC2 OS disk | **EBS** (root volume) |
+| Database (MySQL, PostgreSQL) | **EBS** (io2 for high performance) |
+| Multiple servers same files chahiye | **EFS** |
+| WordPress images shared across servers | **EFS** |
+| Big data processing (temporary) | **Instance Store** |
+| Backup data | **S3** (cheaper than EBS) |
+
+**Real-world architecture example:**
+```
+Load Balancer
+    ↓
+EC2 #1  EC2 #2  EC2 #3  (Auto Scaling group)
+    \      |      /
+     \     |     /    
+        EFS (shared storage — images, uploads, configs)
+        
+Har EC2 ka apna EBS (OS + app code)
+Sab EC2 same EFS mount karte hain (shared content)
+```
+
+## Secrets Manager
+
+AWS Secrets Manager ek **secure secret storage** service hai jisme aap passwords, API keys, database credentials, aur sensitive data store karte ho. Secrets encrypted hote hain aur **auto-rotate** bhi ho sakte hain.
+
+**Example — Amazon ka database password:**
+Amazon ka app MySQL database se connect hota hai:
+1. **Pehle (wrong):** Developer `config.js` me hardcode karta hai — `password = "admin123"`
+   - Code leak hua → password leak
+   - Password change kiya to har server me manual update karna padega
+2. **Secrets Manager se:**
+   - Database password Secrets Manager me store hai
+   - App code me sirf ek API call: `getSecret("prod/db/password")`
+   - Koi hardcode nahi, koi leak nahi
+   - Password auto-rotate hota hai (30 din me ek baar)
+   - Sab servers automatically naya password le lete hain
+
+**Secrets Manager vs Parameter Store (SSM):**
+
+| Feature | Secrets Manager | Parameter Store (Free) |
+|---------|----------------|----------------------|
+| Price | **$0.40/secret/month** + $0.05/10k API calls | **Free** (standard), $0.05/parameter (advanced) |
+| Auto-rotation | ✅ (Lambda trigger) | ❌ |
+| Encryption | ✅ Always (KMS) | ✅ (optional, with KMS) |
+| Cross-account access | ✅ (resource policy) | ❌ (limited) |
+| Max size | 64KB | 8KB (standard), 8KB (advanced) |
+| When to use | Database passwords, API keys needing rotation | Config values, non-sensitive data, free option |
+
+**Key features:**
+- **Encryption at rest** — AWS KMS se automatically encrypt
+- **Auto-rotation** — Lambda function banao jo password rotate kare (RDS, Redshift, DocumentDB)
+- **Fine-grained access** — IAM policies se control karo kaun kaunsa secret access kar sakta hai
+- **Secret versioning** — purane versions bhi available hain (rollback possible)
+- **Cross-region replication** — secrets doosre region me bhi replicate kar sakte ho
+
+**How it works:**
+```
+Aapka App (EC2/Lambda)
+    ↓ (API Call: GetSecretValue)
+Secrets Manager
+    ↓ (Decrypt with KMS)
+Plaintext password/API key return
+```
+
+**Common use cases:**
+| Secret | Store karo | Rotation |
+|--------|-----------|----------|
+| RDS/MySQL password | ✅ Secrets Manager | ✅ Auto (built-in RDS rotation) |
+| API key (Google, Stripe, etc.) | ✅ Secrets Manager | ✅ Custom Lambda |
+| GitHub token | ✅ Secrets Manager | ✅ Custom Lambda |
+| SSH key | ✅ Secrets Manager | ❌ (manual) |
+| App config (not sensitive) | **Parameter Store** (free) | ❌ |
+
+**Setup steps:**
+
+1. **Secret banao**
+   - Secrets Manager → "Store a new secret"
+   - Secret type: RDS database / Other (API key, custom)
+   - Key-value pairs daalo (username, password, host, port)
+
+2. **Encryption key select karo**
+   - Default KMS key (aws/secretsmanager) ya apna custom KMS key
+
+3. **Auto-rotation enable karo** (recommended)
+   - Lambda function select karo ya create karo
+   - Rotation schedule (30 days, 60 days, etc.)
+
+4. **App me use karo**
+   ```python
+   # Example: Python mein secret lena
+   response = client.get_secret_value(SecretId='prod/db/password')
+   secret = json.loads(response['SecretString'])
+   db_password = secret['password']
+   ```
+
+5. **IAM permissions do**
+   - EC2/Lambda ke IAM role me `secretsmanager:GetSecretValue` permission do
+   - Sirf wahi applications access karein jinhe zaroorat hai
+
+**Important Points:**
+- Secrets Manager **$0.40 per secret per month** + API call charges — dhyan rakho cost ka
+- Agar rotation ki zaroorat nahi hai, to **SSM Parameter Store (free)** use karo
+- Secret access **CloudTrail me log** hota hai — pata chalega kisne kab access kiya
+- **Cache karo** secret ko app me (1 hour TTL) — baar baar API call na karo (cost + rate limit)
+- Rotation ke waqt **old secret bhi valid rehta hai** (grace period) — downtime nahi aati
+
+## AppConfig
+
+AWS AppConfig ek **app configuration management** service hai jo aapko **bina deploy kiye** app ke settings/features change karne deti hai. Jaise feature flag, toggle, aur config values ko real-time update kar sakte ho — code change nahi, deploy nahi, app restart nahi.
+
+**Example — Amazon ka "Dark Mode" feature:**
+Amazon ne dark mode feature banaya hai but abhi sab users ko nahi dena chahte:
+1. **Pehle:** Dark mode code ready hai, but conditional check se sab ke liye OFF hai
+2. **AppConfig me:** `dark_mode_enabled` ek **flag** hai — currently `false`
+3. **Ab:** 10% users ke liye enable karna hai → AppConfig me value `true` karo
+4. **Result:** App restart nahi karna pada, deploy nahi karna pada — bas flag toggle kiya
+5. **Rollback:** Issue aaya to wapas `false` karo — turant
+
+**AppConfig vs Environment Variables vs Parameter Store:**
+
+| Feature | Env Variables (hardcoded) | Parameter Store | AppConfig |
+|---------|--------------------------|----------------|-----------|
+| Change method | Deploy | API call | **Gradual rollout** |
+| Change without deploy | ❌ | ✅ | ✅ |
+| Validation before apply | ❌ | ❌ | ✅ |
+| Gradual rollout | ❌ | ❌ | ✅ (10%, 50%, 100%) |
+| Auto-rollback | ❌ | ❌ | ✅ (monitor + revert) |
+| Jeda lagaya | ❌ | ❌ | ❌ (instant on all serves) |
+
+**Key features:**
+- **Feature flags** — code me boolean toggle
+- **Config values** — API endpoint URL, timeouts, throttle limits
+- **Validator** — config deploy se pehle validate karo (JSON schema, Lambda)
+- **Deployment strategy** — Linear (equal %), Canary (10% → 50% → 100%), All-at-once
+- **Auto-rollback** — monitoring alarm trigger hua to automatic revert
+- **Hosted config** — AppConfig me hi store karo ya external (S3, SSM, Parameter Store)
+
+**How it works:**
+```
+Developer → AppConfig me config update karta hai
+         ↓
+AppConfig validates config (schema check, Lambda)
+         ↓
+Gradual rollout start hota hai (e.g., 10% servers)
+         ↓
+App monitors — error rate badhi? → Auto-rollback
+         ↓
+Everything healthy → 50% → 100% rollout complete
+```
+
+**AppConfig components:**
+- **Application** — aapki app ka logical name (jaise "ShoppingApp")
+- **Configuration Profile** — config ka type (feature flag, timeout settings)
+- **Strategy** — kaise deploy karna hai (Canary, Linear, All-at-once)
+- **Environment** — dev, test, prod (alag-alag config)
+- **Configuration data** — actual config values (JSON/YAML/text)
+- **Validator** — Lambda ya JSON schema jo config check kare
+
+**Comparison — kab kya use karein:**
+
+| Scenario | Use |
+|----------|-----|
+| Database password, API key | **Secrets Manager** |
+| App timeout, max retries, URLs | **AppConfig** |
+| Dark mode, new UI toggle | **AppConfig** (feature flag) |
+| A/B test — 10% users ko new feature | **AppConfig** |
+| Static non-sensitive config | **SSM Parameter Store** (free) |
+| Deploy-time config (Docker env) | **Environment variables** |
+
+**AppConfig vs LaunchDarkly:**
+- **LaunchDarkly** — third-party, better UI, but expensive
+- **AppConfig** — AWS native, cheaper, AWS ecosystem me integrated
+
+**Simple example — code me feature flag:**
+```python
+# Without AppConfig — hardcoded
+if user.is_eligible:
+    show_dark_mode = True
+
+# With AppConfig — dynamic
+config = appconfig_client.get_configuration(
+    application="ShoppingApp",
+    configuration="feature_flags",
+    client_id=server_id
+)
+if config["dark_mode_enabled"] and user.is_eligible:
+    show_dark_mode = True
+```
+
+**Important:**
+- AppConfig **deployment nahi** hai — ye runtime config change hai
+- Secret values ke liye AppConfig mat use karo — **Secrets Manager** use karo
+- AppConfig + **CloudWatch alarms** lagao — auto-rollback automatic hoga
+- Har config change **CloudTrail me log** hota hai — audit trail milta hai
+
+## Database Services — Overview
+
+```
+AWS Databases
+    ├── Relational (SQL) → RDS, Aurora
+    ├── NoSQL (Key-Value) → DynamoDB, Keyspaces
+    ├── Document → DocumentDB (MongoDB)
+    ├── Graph → Neptune
+    └── Search → OpenSearch
+```
+
+## RDS (Relational Database Service)
+
+RDS ek **managed relational database** service hai. Aapko DB install, patch, backup kuch nahi karna padta — AWS sambhalta hai. Sirf database create karo aur use karo.
+
+**Example — Amazon ka product database:**
+Amazon ke saare products (name, price, category, stock) ek **relational database** me store hote hain:
+```sql
+SELECT * FROM products WHERE category = 'Electronics' AND price < 50000;
+```
+RDS is database ko host karta hai — backup (auto), patching, replication, failover sab automatic.
+
+**Supported database engines:**
+| Engine | Best for |
+|--------|----------|
+| **MySQL** | Open-source, web apps (WordPress, etc.) |
+| **PostgreSQL** | Advanced features, analytics, geospatial |
+| **MariaDB** | MySQL drop-in replacement |
+| **SQL Server** | .NET apps, enterprise |
+| **Oracle** | Legacy enterprise apps |
+| **Db2** | IBM ecosystem |
+
+**Key features:**
+- **Multi-AZ** — ek region me 2 availability zones me replica
+  - Primary AZ fail → automatically secondary failover (30-60 sec)
+  - **Same region** — sirf disaster recovery, not for scaling reads
+- **Read Replicas** — read-only copies for scaling reads (5 per DB)
+  - **Cross-region** — doosre region me bhi replica bana sakte ho
+- **Automated backups** — daily snapshot (7-35 days retention)
+- **Manual snapshots** — aap khud bhi backup le sakte ho (retained forever)
+- **Auto patching** — AWS automatically patches DB engine
+- **Storage auto-scaling** — disk full hone wali ho to automatically increase
+- **Encryption** — KMS encryption at rest, SSL in transit
+
+**RDS Multi-AZ vs Read Replica:**
+| Feature | Multi-AZ | Read Replica |
+|---------|----------|-------------|
+| Purpose | **High availability** (failover) | **Scale reads** (performance) |
+| Writes | Allowed (primary) | ❌ (read-only) |
+| Failover | ✅ Auto (same region) | ❌ |
+| Cross-region | ❌ | ✅ |
+| Number | 1 standby | Up to 5 |
+
+**Analogy:** RDS = **Managed hostel mess** — khana banwana hai to chef nahi rakhna, bas order karo aur khao.
+
+## Aurora
+
+Aurora Amazon ka **custom-built relational database** hai — MySQL aur PostgreSQL ke saath compatible hai lekin **5x faster** aur **more reliable**.
+
+**Example — Amazon ka orders system: Amazon ki order system millions orders/sec handle karta hai. Normal MySQL nahi kar sakta. Amazon ne khud ka DB banaya (Aurora) jo MySQL compatible hai lekin 10x performance deta hai.**
+
+**Aurora vs RDS (MySQL/PostgreSQL):**
+| Feature | RDS MySQL | Aurora MySQL |
+|---------|-----------|-------------|
+| Performance | Normal | **5x faster** |
+| Storage | Max 16TB (EBS) | **128TB** auto-expand |
+| Failover | 30-60 sec | **10-20 sec** (instant) |
+| Read replicas | 5 | **15** |
+| Replication lag | Higher | **<1 sec** (low latency) |
+| Price | Standard | ~20% more expensive |
+
+**Key features:**
+- **Auto-scaling storage** — 10GB to 128TB, bina downtime ke
+- **Instant failover** — 10-20 sec (Multi-AZ)
+- **Global Database** — cross-region replication with <1 sec lag
+- **Backtrack** — time travel karo (point-in-time recovery without new DB)
+- **Serverless (Aurora v2)** — auto-scale compute, pay per second
+- **Clone** — production DB ka clone seconds me (dev/testing ke liye)
+
+**Aurora DB Cluster:**
+```
+              Writer Endpoint (primary)
+              ┌──────────┐
+              │ Aurora   │ (Read/Write)
+              └──────────┘
+                    ↓
+         ┌──────────┴──────────┐
+    ┌────┴────┐         ┌─────┴─────┐
+    │ Reader 1│         │ Reader 2  │ (Read only)
+    └─────────┘         └───────────┘
+         ↑                    ↑
+    Reader Endpoint (auto load balanced)
+```
+
+**Analogy:** RDS = **Sardar ji ka dhaba** (normal), Aurora = **5-star restaurant** (fast, expensive, but premium).
+
+## DynamoDB
+
+DynamoDB Amazon ka **NoSQL key-value + document database** hai. Ye **serverless** hai — koi server nahi, koi maintenance nahi, unlimited scale. Milliseconds me response deta hai.
+
+**Example — Amazon ka shopping cart:**
+Amazon ke 100 million users hain, har user ka ek cart hai:
+```json
+{
+  "userId": "user_12345",
+  "items": ["iPhone 15", "AirPods"],
+  "total": 120000,
+  "savedAt": "2026-07-20T10:30:00Z"
+}
+```
+DynamoDB is cart ko store karta hai — **millions requests/sec** handle karta hai, koi downtime nahi.
+
+**RDS vs DynamoDB — kab kya?**
+| Feature | RDS (SQL) | DynamoDB (NoSQL) |
+|---------|----------|-----------------|
+| Data model | Tables, rows, columns | **Key-value, documents** |
+| Schema | **Fixed** (columns predefined) | **Flexible** (each item different attributes) |
+| Queries | SQL (JOIN, GROUP BY, complex) | Simple (key lookup, query, scan) |
+| Scale | Vertical (bigger instance) | **Horizontal** (auto, unlimited) |
+| Performance | Depends on instance size | **Consistent millisecond** at any scale |
+| ACID transactions | ✅ Full | ✅ (limited — transact get/put) |
+| Relationships | ✅ (foreign keys, JOINs) | ❌ (denormalized data) |
+| Use case | Complex queries, relationships, reporting | High scale, low latency, simple lookups |
+
+**Key concepts:**
+- **Table** — data store hota hai yahan
+- **Item** — ek record (jaise ek user, ek product) — max 400KB
+- **Partition Key** — primary lookup (jaise `userId`) — decides which partition item goes to
+- **Sort Key** — optional, items ko order me rakhne ke liye (jaise `timestamp`)
+- **GSI (Global Secondary Index)** — doosre partition key se query karna
+- **DAX** — DynamoDB Accelerator (in-memory cache, microsecond response)
+
+**Read/Write capacity modes:**
+| Mode | Price | Use case |
+|------|-------|----------|
+| **On-Demand** | Pay per request | Unpredictable traffic, auto-scale |
+| **Provisioned** | Pay per RCU/WCU | Predictable traffic, cheaper |
+
+**RCU/WCU:**
+- **1 RCU** = 1 strongly consistent read/sec of 4KB item
+- **1 WCU** = 1 write/sec of 1KB item
+
+**DynamoDB Streams:**
+- Table me koi change (create/update/delete) hota hai to event generate hota hai
+- Lambda trigger kar sakte ho — "user profile update hua → email bhejo"
+
+**Analogy:** DynamoDB = **Godown ka almirah** — har almirah me ek label (partition key), andar samaan. Bahut saare almirah, bahut fast, kabhi Bhar nahi.
+
+## DocumentDB
+
+DocumentDB Amazon ka **MongoDB-compatible** managed database hai. MongoDB ki tarah documents (JSON) store karta hai.
+
+**Example — Amazon ka product catalog:**
+Har product ki alag properties hoti hain — phone me "screen_size", shirt me "size", book me "pages":
+```json
+// phone
+{ "id": "p1", "name": "iPhone", "type": "phone", "screen_size": 6.1, "price": 79999 }
+// shirt
+{ "id": "p2", "name": "T-Shirt", "type": "clothing", "size": "L", "price": 999, "color": "blue" }
+```
+DocumentDB in documents ko store karta hai — SQL databases me har product ke liye alag table banana padta, yahan ek collection me sab adjust ho jata hai.
+
+**DocumentDB vs DynamoDB:**
+| Feature | DocumentDB | DynamoDB |
+|---------|-----------|----------|
+| Data model | **JSON documents** (flexible schema) | Key-value + documents |
+| Query language | **MongoDB syntax** (find, aggregate) | **Key lookup + Filter** |
+| Indexes | Full MongoDB indexes | Limited (primary key, GSI) |
+| ACID transactions | ✅ | ✅ (limited) |
+| Use case | MongoDB apps migrate karni hai | New apps, simple lookups at scale |
+
+**When to use DocumentDB:**
+- Existing MongoDB app hai — direct migrate karo, code change nahi
+- Flexible document storage chahiye (nested JSON)
+- MongoDB compatible tools (Mongoose, Compass) use karna hai
+
+## Keyspaces
+
+Keyspaces Amazon ka **managed Apache Cassandra** database hai. Cassandra ek **wide-column NoSQL** database hai jo **petabytes** data handle kar sakta hai.
+
+**Example — Amazon ke device time-series data:**
+Amazon ke Alexa devices har second data bhejte hain:
+```cql
+INSERT INTO device_metrics (device_id, timestamp, cpu, memory, temp)
+VALUES ('alexa_123', '2026-07-20T10:30:00', 45.2, 68.1, 36.5);
+```
+Keyspaces millions writes/sec handle karta hai — perfect for IoT, time-series data.
+
+**Keyspaces vs DynamoDB:**
+| Feature | Keyspaces (Cassandra) | DynamoDB |
+|---------|----------------------|----------|
+| Data model | **Wide-column** (row with 1000s of columns) | Key-value |
+| Query language | **CQL** (Cassandra Query Language) | DynamoDB API (AWS SDK) |
+| Best for | Time-series, IoT, large writes | General purpose, simple lookups |
+| Partitioning | Partition key + Clustering columns | Partition key + Sort key |
+| Cassandra compatible | ✅ (existing Cassandra apps migrate) | ❌ |
+
+## Neptune
+
+Neptune Amazon ka **graph database** hai. Ye data ko **nodes** (entities) aur **edges** (relationships) ke form me store karta hai.
+
+**Example — Amazon ka recommendation engine:**
+"Users who bought this also bought":
+```
+[User A] — BOUGHT → [iPhone] — BOUGHT_BY → [User B]
+   ↓                    ↓                      ↓
+ BOUGHT              BOUGHT                 BOUGHT
+   ↓                    ↓                      ↓
+[MacBook] ← — — —  [AirPods] ← — — — [Watch]
+```
+Neptune query karta hai: "User A ne kya khareeda? Un users ne aur kya khareeda jo iPhone khareeda?" — seconds me answer.
+
+**Neptune vs DynamoDB:**
+| Feature | Neptune (Graph) | DynamoDB |
+|---------|----------------|----------|
+| Data | Nodes + Relationships | Key-value pairs |
+| Query example | "Kisne kya khareeda aur usne aur kya khareeda?" | "User_123 ki details do" |
+| Best for | Social networks, recommendations, fraud detection | Simple lookups, shopping carts, sessions |
+| Relationships | **Native** (edges) | **Manual** (join code me karna padega) |
+
+**Neptune use cases:**
+- **Social networks** — friends, followers, likes
+- **Recommendations** — "customers also bought"
+- **Fraud detection** — suspicious transaction patterns
+- **Knowledge graphs** — Google Knowledge Graph jaisa
+- **Network analysis** — dependencies, infrastructure mapping
+
+**Analogy:** RDS = **Excel sheet**, DynamoDB = **Almirah**, Neptune = **Family tree** — relationships track karna easy hai.
+
+## OpenSearch
+
+OpenSearch (pahle Elasticsearch) ek **search + analytics** engine hai. Full-text search, log analytics, aur real-time visualization ke liye use hota hai.
+
+**Example — Amazon ka search bar:**
+Amazon pe "wireless bluetooth headphones noise cancelling" search karo:
+1. OpenSearch millions products me **fuzzy search** karta hai
+2. Matching products **relevance score** ke hisaab se sort karta hai
+3. "Did you mean?" suggestions bhi OpenSearch deta hai
+4. Filters (price, brand, rating) — OpenSearch aggregation
+
+**OpenSearch vs RDS (LIKE query):**
+| Feature | RDS (LIKE '%keyword%') | OpenSearch |
+|---------|----------------------|-----------|
+| Search speed | **Slow** (full table scan) | **Milliseconds** (inverted index) |
+| Fuzzy search | ❌ (exact match) | ✅ (typo tolerate karta hai) |
+| Ranking/scores | ❌ | ✅ (relevance score) |
+| Full-text search | ❌ | ✅ |
+| Aggregations | ❌ | ✅ (count by category, avg price, etc.) |
+| Auto-complete | ❌ | ✅ (prefix/suggestions) |
+| Log analytics | ❌ | ✅ (Kibana dashboards) |
+
+**Key components:**
+- **Index** — RDS ke table jaisa (data store hota hai)
+- **Document** — ek record (JSON format)
+- **Shard** — index ka part (horizontally partitioned)
+- **Node** — ek server in the cluster
+- **Kibana/OpenSearch Dashboards** — visualization tool (graphs, pie charts, logs)
+
+**Common use cases:**
+| Use case | Example |
+|----------|---------|
+| **Search** | E-commerce product search, site search |
+| **Log analytics** | Centralized logging (ELK stack) |
+| **Application monitoring** | Error tracking, performance metrics |
+| **Security analytics** | SIEM (threat detection, log analysis) |
+| **Full-text search** | Documents, articles, knowledge base |
+
+**Analogy:** OpenSearch = **Library ka card catalog** — books systematically indexed, koi bhi book turant mil jati hai. RDS ka LIKE = **Purane library me baith ke book search karna**.
+
+## DMS (Database Migration Service)
+
+DMS ek **database migration** service hai jo databases ko **zero downtime** pe migrate karne deti hai — on-premise se AWS, ya ek AWS service se doosri.
+
+**Example — Amazon ka MySQL se Aurora migration:**
+Amazon ka purana database MySQL 5.7 pe hai, ab Aurora pe migrate karna hai:
+1. **Pehle (manual):** DB band karo → export → import → DB chalu karo → **hours downtime**
+2. **DMS se:** Migration chalta rahega, app normal chalti rahegi
+   - DMS pehle full data copy karta hai
+   - Phir continuously **CDC** (Change Data Capture) — jo bhi change ho raha hai, naye DB pe sync karta hai
+   - Ready ho to ek click me switch — **1-2 minute downtime**
+
+**DMS key features:**
+- **Zero downtime migration** — app running rehti hai during migration
+- **CDC (Change Data Capture)** — real-time changes sync
+- **Homogeneous migration** — MySQL → MySQL, Oracle → Oracle
+- **Heterogeneous migration** — Oracle → Aurora, SQL Server → PostgreSQL (schema conversion tool - SCT)
+- **One-time** ya **ongoing replication**
+- **Schema Conversion Tool (SCT)** — automatically schema convert karta hai Oracle/MSSQL se open-source DB me
+
+**Common migration scenarios:**
+| From | To | Type |
+|------|-----|------|
+| On-premise MySQL | RDS MySQL | Homogeneous (easy) |
+| On-premise Oracle | Aurora PostgreSQL | Heterogeneous (SCT needed) |
+| EC2 MySQL | RDS Aurora | Homogeneous |
+| DynamoDB | S3 (export) | Export |
+| Any DB | Any DB | Ongoing replication |
+
+**DMS components:**
+- **Source endpoint** — existing database connection
+- **Target endpoint** — AWS destination (RDS, Aurora, DynamoDB, S3)
+- **Replication instance** — EC2 jo migration kar raha hai (size choose karo)
+- **Task** — migration task (existing data load + CDC)
+
+**Analogy:** DMS = **Ghar ka shifting van** — purane ghar (on-prem) se naye ghar (AWS) me samaan le jata hai, aur samaan aata rahe to bhi manage kar leta hai (CDC).
+
+## ElastiCache
+
+ElastiCache ek **managed in-memory caching** service hai jo Redis ya Memcached chalati hai. Ye data ko **RAM me store** karta hai — disk se 1000x faster — taki app fast response de sake.
+
+**Example — Amazon ka product page:**
+Amazon ka ek product page lakhon users roz kholte hain:
+1. **Bina cache:** Har request pe RDS se product details fetch → **50ms** (slow, DB pe load)
+2. **ElastiCache se:**
+   - Pehli baar: DB se fetch karo → cache me store karo → user ko do
+   - Agli baarein: **Cache se directly** → **<1ms** → user ko instant milta hai
+   - DB pe load bhi kam hota hai — handles more users
+
+**ElastiCache vs RDS — speed comparison:**
+
+| Storage | Read Speed | Use for |
+|---------|-----------|---------|
+| **RDS (Disk)** | ~10-50ms | Permanent data, ACID compliance |
+| **ElastiCache (RAM)** | **<1ms** | Temporary hot data, session, cache |
+
+**Redis vs Memcached:**
+
+| Feature | Redis | Memcached |
+|---------|-------|-----------|
+| Data types | String, List, Set, Hash, Sorted Set, Streams | **Only strings** |
+| Persistence | ✅ (disk me bhi save kar sakte ho) | ❌ (RAM me hi, restart = data gone) |
+| Replication | ✅ (Multi-AZ, read replicas) | ❌ (no replication) |
+| Clustering | ✅ (auto sharding) | ✅ |
+| Use case | Caching + advanced (queues, sessions, leaderboards) | Simple cache (basic key-value) |
+| When to use | Complex data, need persistence/replication | Simple, cheap caching |
+
+**Key features:**
+- **Sub-millisecond latency** — RAM me store hai, disk nahi lagti
+- **Auto-scaling** — cluster size increase/decrease
+- **Multi-AZ** — Redis replication with automatic failover
+- **Encryption** — in-transit (TLS) aur at-rest (KMS)
+- **Backup/Restore** — Redis snapshots S3 me
+- **Managed** — AWS patching, monitoring, failover handle karta hai
+
+**Common use cases:**
+
+| Use case | Example |
+|----------|---------|
+| **Database cache** | Frequently queried data cache karo (product details, user profiles) |
+| **Session store** | User sessions store (shopping cart, login state) |
+| **API rate limiting** | Count requests per user, block if limit exceeds |
+| **Leaderboard** | Redis Sorted Set — game scores, rankings |
+| **Message queue** | Redis Pub/Sub or List — simple queue between services |
+| **Real-time analytics** | Count page views, active users |
+
+**Cache patterns — Lazy Loading vs Write-Through:**
+
+| Pattern | Kya hota hai | Pros | Cons |
+|---------|-------------|------|------|
+| **Lazy Loading** | Miss → DB se lo → cache me daalo | Simple, only caches what's needed | First request slow (cache miss) |
+| **Write-Through** | Write ho to cache bhi update karo | Cache always fresh | Writes slower, caches unused data |
+
+**Analogy:** ElastiCache = **Chai ki tapri ke paas rakhne wala chullah** — gas pe chai garam karna (disk) 10 min lagta hai, chullah (RAM) pe 30 sec. Same kaam, but faster.
+
+## MemoryDB
+
+MemoryDB ek **Redis-compatible, durable in-memory database** hai. ElastiCache jaise RAM fast hai, lekin data **kabhi nahi** khota — disk pe bhi store hota hai.
+
+**Example — Amazon ka real-time gaming leaderboard:**
+Amazon Games ka live leaderboard:
+- Har second 10000 users ke scores update ho rahe hain
+- **ElastiCache se:** Fast hai but server crash hua to leaderboard data **lost**
+- **MemoryDB se:** Fast bhi hai (RAM me), aur **durable** bhi (disk me multi-AZ write ahead log)
+- Server crash hua → restart → data safe
+
+**ElastiCache vs MemoryDB — main difference:**
+
+| Feature | ElastiCache (Redis) | MemoryDB |
+|---------|--------------------|----------|
+| Purpose | **Cache** (fast, can lose data) | **Database** (fast + durable) |
+| Durability | ❌ (restart = data loss without snapshot) | ✅ **Multi-AZ log** — data never lost |
+| Speed | <1ms | <1ms (same Redis engine) |
+| Persistence | Optional (snapshots) | **Mandatory** (write-ahead log) |
+| Multi-AZ | ✅ (failover) | ✅ **Multi-AZ writes** (quorum-based) |
+| Use case | Caching, sessions, temporary data | Primary database — real-time apps, gaming, financial |
+
+**When to use what?**
+
+| Scenario | Use |
+|----------|-----|
+| DB ka cache chahiye (fast, loss ok) | **ElastiCache** |
+| Sessions store (logout pe delete, loss ok) | **ElastiCache** |
+| Real-time gaming scores (data must not lose) | **MemoryDB** |
+| Financial transactions (durable + fast) | **MemoryDB** |
+| Simple key-value cache (cheap) | **Memcached** |
+| Chat app, message queue | **ElastiCache (Redis)** |
+
+**Key MemoryDB features:**
+- **Redis compatible** — Redis clients directly connect kar sakte hain
+- **Microsecond reads** — RAM me hai
+- **Multi-AZ durability** — 3 AZs me data replicated (2 out of 3 write acknowledgement)
+- **Auto-scaling** — cluster resize without downtime
+- **Point-in-time recovery** — kisi bhi time pe restore
+
+**Analogy:**
+- **ElastiCache** = **Chalkboard** — fast likho/mitao, lekin pani lag gaya to sab khatam
+- **MemoryDB** = **Notebook** — fast likho, aur har page photo bhi khinch lo (durable)
+
+## AI/ML Services — Overview
+
+```
+AWS AI/ML
+    ├── Foundation Models → Bedrock
+    ├── ML Training/Hosting → SageMaker
+    ├── Image/Video Analysis → Rekognition
+    ├── Text-to-Speech → Polly
+    └── Speech-to-Text → Transcribe
+```
+
+## Bedrock
+
+Bedrock ek **managed foundation model (FM) service** hai jo aapko Amazon, Anthropic, Meta, Mistral, Stability AI ke LLMs (Large Language Models) ko API se use karne deti hai — bina koi model host kiye, bina GPU manage kiye.
+
+**Example — Amazon ka customer support chatbot:**
+Amazon ka AI chatbot jo aapki queries handle karta hai:
+1. Aap likhte ho: "Mera order abhi tak nahi aaya"
+2. Bedrock **Claude (Anthropic)** model ko API call karta hai
+3. Claude response generate karta hai: "Aapka order kal tak aa jayega, tracking ID: #12345"
+4. Aapko reply milta hai — koi model training nahi, koi server nahi, direct response
+
+**Bedrock key features:**
+- **Foundation models** — Claude (Anthropic), Llama (Meta), Titan (Amazon), Mistral, Stable Diffusion
+- **No infrastructure** — bas API call karo, AWS model host karta hai
+- **Fine-tuning** — apne data se model customize karo (optional)
+- **RAG (Retrieval Augmented Generation)** — apne data (S3, knowledge base) se answers dilaao
+- **Agents** — Bedrock agent banao jo APIs call kar sake, tasks execute kar sake
+- **Guardrails** — toxic content filter, topic restrictions
+- **Security** — data AWS ke andar rehta hai, model training ke liye use nahi hota
+
+**Bedrock vs SageMaker:**
+
+| Feature | Bedrock | SageMaker |
+|---------|---------|-----------|
+| What you do | **Use pre-built models** via API | **Train + host your own models** |
+| ML expertise needed | **Minimal** (just API calls) | **High** (data science, ML engineering) |
+| Customization | Fine-tuning, RAG | Train from scratch |
+| Cost | Pay per token/usage | Pay for training + hosting compute |
+| Best for | Integrate AI fast (chat, search, content) | Build custom ML models |
+
+**Supported models (examples):**
+| Provider | Models | Best for |
+|----------|--------|----------|
+| **Anthropic** | Claude 3.5 Sonnet, Haiku | Chat, coding, analysis |
+| **Amazon** | Titan Text, Titan Embeddings | Text generation, search |
+| **Meta** | Llama 3.1 | Open-source, general purpose |
+| **Mistral** | Mistral Large | Multilingual, reasoning |
+| **Stability AI** | Stable Diffusion 3 | Image generation |
+
+**Analogy:** Bedrock = **Google Play Store** — apps already bani hui hain, bas download karo aur use karo. SageMaker = **App development studio** — khud app banao.
+
+## SageMaker
+
+SageMaker ek **full ML platform** hai jo machine learning model build, train, deploy karne ke liye hai — data preparation se lekar production hosting tak sab kuch.
+
+**Example — Amazon ka product recommendation model:**
+Amazon ne "Customers also bought" feature ke liye ML model banaya:
+1. **Data preparation** — past purchase data clean karo (SageMaker Data Wrangler)
+2. **Train model** — GPU instances pe model train karo (SageMaker Training)
+3. **Tune parameters** — best model version find karo (SageMaker Hyperparameter Tuning)
+4. **Deploy** — model API ke roop me host karo (SageMaker Endpoint)
+5. **Monitor** — model performance degrade na ho (SageMaker Model Monitor)
+
+**SageMaker components:**
+| Component | Kya karta hai |
+|-----------|-------------|
+| **Studio** | Web IDE for ML (code, visualize, collaborate) |
+| **Data Wrangler** | Data clean/transform (no code) |
+| **Training** | GPU/CPU instances pe model train karo |
+| **Autopilot** | Auto ML — apne data do, model automatically bana de |
+| **Endpoint** | Model deploy karo as API |
+| **Model Monitor** | Production me model quality track karo |
+| **Feature Store** | Features centralized store karo (reuse) |
+| **Pipeline** | End-to-end ML workflow (CI/CD for ML) |
+
+**SageMaker vs Bedrock:**
+```
+SageMaker = Khud ka pizza banake khayenge (base se toppings tak)
+Bedrock = Domino's se pizza order karenge (already ready)
+```
+
+**Analogy:** SageMaker = **Full kitchen + recipe book** — Everything needed to cook from scratch.
+
+## Rekognition
+
+Rekognition ek **image and video analysis** service hai jo faces detect karti hai, objects identify karti hai, text read karti hai, aur inappropriate content filter karti hai.
+
+**Example — Amazon ka photo gallery face search:**
+Amazon Photos me "Merry" search karo — photos me Merry ke saare photos dikh jaate hain:
+1. App Rekognition ko bhejti hai: "is photo me kaun hai?"
+2. Rekognition detect karta hai: "Face detected — Merry (98% confidence)"
+3. Auto-tag hota hai — searchable ho jata hai
+4. Millions photos me se seconds me result
+
+**Key features:**
+- **Object detection** — "yeh photo me kya hai?" (car, dog, tree, product)
+- **Face detection/analysis** — face location, age range, emotion (happy/sad/angry)
+- **Face search** — "yeh face pehle kabhi dekha hai?" (celebrity matching)
+- **Text detection** — photos/signs me text read karo (OCR)
+- **Content moderation** — explicit/inappropriate images filter karo
+- **Celebrity recognition** — photo me kaunsi celebrity hai
+- **Label detection** — scene description (beach, mountain, office)
+
+**Common use cases:**
+| Use case | Example |
+|----------|---------|
+| **Content moderation** | User-uploaded photos check karo (nudity, violence) |
+| **Face verification** | KYC — aadhar photo se live selfie match |
+| **Video analysis** | CCTV footage me suspicious activity detect |
+| **Text extraction** | Number plate reading, document scanning |
+| **Image search** | E-commerce — "red shoes" search pe photo match karo |
+
+**Analogy:** Rekognition = **Bandar kya dekhte hain** — photo dekhte hi bata deta hai kya hai, kaun hai, kya likha hai.
+
+## Polly
+
+Polly ek **text-to-speech (TTS)** service hai jo likhi hui text ko human-like voice me convert karti hai.
+
+**Example — Amazon Alexa bolti hai:**
+Jab aap Alexa se puchte ho "aaj mausam kaisa hai":
+1. Alexa text generate karta hai: "Aaj Delhi me mausam saaf rahega, 32 degrees Celsius"
+2. Alexa ye text **Polly** ko bhejta hai
+3. Polly realistic voice me bolta hai — "आज दिल्ली में मौसम साफ रहेगा..."
+4. Aapko Alexa ki awaz sunai deti hai
+
+**Key features:**
+- **Voices** — 50+ voices across 30+ languages
+- **Indian languages** — Hindi, Tamil, Telugu, Bengali, Marathi, etc.
+- **Neural TTS** — realistic, natural sounding (better than standard)
+- **SSML** — custom pronunciation, pauses, emphasis
+- **Speech Marks** — word timestamps (lip-sync ke liye)
+- **Lexicon** — custom word pronunciation (jaise "AWS" = "एडब्ल्यूएस")
+
+**Pricing:**
+- **Standard voices** — sangat sasta (~$0.000004/character)
+- **Neural voices** — ~$0.000016/character
+
+**Use cases:**
+| Use case | Example |
+|----------|---------|
+| **Voice assistants** | Alexa, custom bots |
+| **Accessibility** | Visually impaired users ke liye screen reader |
+| **E-learning** | Articles/books ko audio me convert |
+| **IVR systems** | Call center automated voice |
+| **Video narration** | YouTube videos ke liye auto voiceover |
+
+**Analogy:** Polly = **Audiobook reader** — kitab (text) padh ke suna deta hai.
+
+## Transcribe
+
+Transcribe ek **speech-to-text (STT)** service hai jo audio/video se text extract karti hai. Speech ko real-time ya recorded audio se transcribe karti hai.
+
+**Example — Amazon call center recordings:**
+Amazon ka customer support call record karta hai (for quality):
+1. Call recording stored in S3
+2. **Transcribe** audio file leke text banata hai:
+   - "Hello, mera order number 12345 hai. Kal deliver hona tha lekin abhi tak nahi aaya."
+3. Text searchable ho jata hai — support team baad me analysis kar sakti hai
+4. **Sentiment analysis** bhi — customer angry hai ya happy?
+
+**Key features:**
+- **Automatic speech recognition (ASR)** — audio → text
+- **Real-time streaming** — live transcription (live captions, meetings)
+- **Batch processing** — recorded audio files (S3 input)
+- **Speaker diarization** — "Speaker 1: ... Speaker 2: ..." (kaun kya bola)
+- **Custom vocabulary** — domain-specific words (jaise "EC2", "IAM", "Lambda")
+- **Language identification** — automatically detect language
+- **Punctuation** — automatic commas, full stops, questions marks
+- **Redaction** — PII data (credit card, aadhar) automatically hide karo
+
+**Transcribe vs Polly:**
+| | Transcribe | Polly |
+|---|-----------|-------|
+| Direction | **Speech → Text** (listen karo → likho) | **Text → Speech** (likho → sunao) |
+| Input | Audio/Video file | Text string |
+| Output | Text (JSON/SRT/VTT) | Audio (MP3/OGG/PCM) |
+
+**Use cases:**
+| Use case | Example |
+|----------|---------|
+| **Call center analytics** | Customer calls transcribe karo → search, analyze |
+| **Subtitles/captions** | YouTube/Twitch ke live captions |
+| **Meeting transcription** | Zoom/Teams meetings ka auto notes |
+| **Voice commands** | "Alexa, lights on" → Transcribe text me convert karta hai |
+| **Medical transcription** | Doctor ke dictation notes transcribe |
+| **Content search** | Podcasts/videos me search karo specific topic |
+
+**Analogy:** Transcribe = **Typist** — jo bhi bolo, type kar deta hai.
+
+## SNS (Simple Notification Service)
+
+SNS ek **pub/sub (publish/subscribe) messaging** service hai jo ek message ko **multiple receivers** ko bhejti hai — email, SMS, Lambda, SQS, HTTP endpoints, mobile push notifications.
+
+**Example — Amazon ka "Order Confirmation" system:**
+Jab aap Amazon pe order karte hain, multiple cheezein hoti hain ek saath:
+1. Order place hua
+2. **SNS topic "OrderPlaced"** publish hota hai
+3. Jo subscribe hain unko message jata hai:
+   - **Email** → aapko: "Order confirmed! Your iPhone will arrive tomorrow"
+   - **SMS** → warehouse ko: "Pack order #12345"
+   - **Lambda** → trigger: "Update inventory database"
+   - **SQS** → queue: "Send email notification to user"
+4. Sab ek saath hota hai — fault tolerant, loosely coupled
+
+**SNS key concepts:**
+- **Topic** — logical channel (jaise "OrderPlaced", "PaymentFailed")
+- **Publisher** — jo message bhejta hai (EC2, Lambda, CloudWatch)
+- **Subscriber** — jo message leta hai (Email, SMS, Lambda, SQS, HTTP)
+- **Message** — JSON ya plain text (max 256KB)
+
+**SNS vs SQS — basic difference:**
+| Feature | SNS | SQS |
+|---------|-----|-----|
+| Pattern | **Pub/Sub** (1 publisher → N subscribers) | **Queue** (1 producer → 1 consumer) |
+| Delivery | **Push** (SNS subscribers ko bhejta hai) | **Pull** (consumer SQS se message leta hai) |
+| Persistence | ❌ (message deliver → delete) | ✅ (message queue me rehta hai) |
+| Use case | Broadcast, notifications | Decouple services, async processing |
+
+**Supported subscribers (receivers):**
+| Subscriber | Use |
+|------------|-----|
+| **Email** | Send email notification to user/admin |
+| **SMS** | Send text message to phone |
+| **Lambda** | Trigger Lambda function |
+| **SQS** | Queue message for async processing |
+| **HTTP/HTTPS** | Call external webhook (taap ki tapri API) |
+| **Mobile Push** | Send push notification to app (Android/iOS) |
+| **CloudWatch** | Create alarm, send to CloudWatch Logs |
+
+**SNS vs SES (Simple Email Service):**
+| Feature | SNS | SES |
+|---------|-----|-----|
+| Channel | Email, SMS, SQS, Lambda, HTTP | **Only Email** |
+| Purpose | **Notification system** (event-driven) | **Bulk email sending** (marketing, transactional) |
+| Volume | Moderate | **High volume** (millions emails/day) |
+| Analytics | Basic | Open rates, bounce rates, click tracking |
+| Use case | Order confirmation, alerts, alarms | Newsletters, promotional emails, receipts |
+
+**Fan-out pattern (SNS + SQS):**
+```
+Order Service → SNS Topic "OrderPlaced"
+                   ↓
+        ┌──────────┼──────────┐
+        ↓          ↓          ↓
+    SQS Queue1  SQS Queue2  Lambda
+        ↓          ↓
+   Email Service  Analytics
+```
+- One message → SNS → multiple SQS queues
+- Har queue apni speed pe process karega
+- Ek service slow ya down hai to doosre pe effect nahi
+
+**Filter policies:**
+SNS filter karke specific subscribers ko specific messages bhej sakta hai:
+```json
+// Order topic pe 2 subscribers
+Subscriber 1 — Filter: { "type": ["electronics"] }  → sirf electronics orders
+Subscriber 2 — Filter: { "type": ["fashion"] }      → sirf fashion orders
+```
+
+**Pricing:**
+- **$0.50 per 1 million SNS requests**
+- **Free tier:** 1 million requests/month
+- SMS: pay per text message (varies by country)
+
+**Analogy:** SNS = **WhatsApp Group** — ek baar message likho, group me sabko ek saath chala jata hai.
+
+## SQS (Simple Queue Service)
+
+SQS ek **fully managed message queue** service hai jo microservices ko **decouple** karti hai. Ek service message queue me daalti hai, doosri service apni speed se process karti hai.
+
+**Example — Amazon ka order processing:**
+Jab aap Amazon pe order karte hain:
+1. **Order Service** order lega aur SQS me message daalega: `{ "orderId": 12345, "userId": "user_99", "items": ["iPhone"] }`
+2. **Payment Service** queue se message lega → payment process karega
+3. Payment success hua to **Shipping Service** queue se lega → dispatch karega
+4. Har service apni speed se kaam karegi — ek slow hai to doosra wait nahi karega
+
+**Without SQS (tight coupling):**
+```
+Order → Payment → Shipping → Email
+         ↓ Agar payment slow hai to sab block
+```
+
+**With SQS (decoupled):**
+```
+Order → [SQS Queue 1] → Payment
+Order → [SQS Queue 2] → Fraud Detection
+Payment → [SQS Queue 3] → Shipping
+```
+Har queue independently process hota hai — **no blocking, no timeout, retry possible.**
+
+**SNS vs SQS — detailed comparison:**
+
+| Feature | SNS | SQS |
+|---------|-----|-----|
+| Pattern | **Push** (publisher → subscriber) | **Pull** (producer → queue → consumer) |
+| Delivery | **Immediate push** to subscribers | Consumer **polls/pulls** messages |
+| Persistence | ❌ (not stored, delivered once) | ✅ **Up to 14 days** |
+| Retry | ❌ (failed = lost) | ✅ (Visibility Timeout + DLQ) |
+| Fan-out | ✅ 1 → N subscribers | ❌ 1 → 1 consumer (per queue) |
+| Use case | Notifications, alerts, broadcasts | Async processing, decoupling, buffering |
+
+**SQS key features:**
+- **Decoupling** — services ek doosre ke baare me nahi jaanti, sirf queue se baat karti hain
+- **Auto-scaling** — queue size bada to consumers auto-scale
+- **At-least-once delivery** — message ek baar to pahunchta hi hai (duplicate possible)
+- **Ordering** — Standard Queue: no guarantee; FIFO Queue: strict order
+- **Dead Letter Queue (DLQ)** — failed messages ke liye separate queue (analysis ke liye)
+- **Visibility Timeout** — message visible → consumer picks it → hidden (processing) → delete
+- **Batching** — ek saath 10 messages send/receive
+
+**SQS Queue Types:**
+
+| Feature | Standard Queue | FIFO Queue |
+|---------|---------------|------------|
+| Throughput | **Unlimited** | 3000 msg/sec (with batching) |
+| Ordering | **Best-effort** (no guarantee) | **Strict FIFO** (first in, first out) |
+| Exactly-once | **At-least-once** (duplicates possible) | **Exactly-once** (deduplication) |
+| Name suffix | No suffix | Must end with `.fifo` |
+| Use case | High throughput, order doesn't matter | Banking, transactions, strict ordering |
+
+**SQS with Auto Scaling:**
+```
+CloudWatch Alarm (queue length > 100)
+         ↓
+Auto Scaling Group (spin new EC2)
+         ↓
+New EC2 starts polling SQS → processes messages
+         ↓
+Queue empty → ASG scales down
+```
+
+**SQS + Lambda:**
+```
+SQS Queue → Lambda (event source mapping)
+Lambda automatically polls SQS and processes messages
+```
+- Lambda batch size: up to 10 messages per invocation
+- If Lambda fails → message returns to queue → retry → DLQ
+
+**Visibility Timeout — how it works:**
+```
+1. Message in queue (visible)
+2. Consumer polls → message becomes "invisible" (visibility timeout starts)
+3. Consumer processes...
+4a. Success → consumer deletes message
+4b. Fail → visibility timeout ends → message visible again for retry
+4c. Max retries exhausted → message moves to DLQ
+```
+
+**Pricing:**
+- **First 1 million requests/month free**
+- Standard: $0.40 per million requests (after free tier)
+- FIFO: $0.50 per million requests
+
+**Real-world example — e-commerce architecture:**
+```
+User places order
+    ↓
+API Gateway + Lambda (Order Service)
+    ↓
+[SQS Queue: orders.fifo]
+    ↓
+Payment Service (EC2) polls queue
+    ↓
+[SQS Queue: payments]
+    ↓
+Inventory Service + Shipping Service
+```
+- Agar Payment Service down hai to bhi orders queue me stack hote rahenge
+- Payment Service wapas aate hi processing continue — koi loss nahi
+
+**Analogy:** SQS = **Restaurant ka token system** — aap order karte ho (queue me daal do), waiter jab free hota hai tab order process karta hai. Aapko server ke free hone ka wait nahi karna padta.
+
+## EventBridge
+
+EventBridge ek **serverless event bus** service hai jo AWS services, SaaS apps, aur aapke custom apps ke beech events route karti hai. Pahle iska naam "CloudWatch Events" tha.
+
+**Example — Amazon ka "New Seller Registration" flow:**
+Jab koi naya seller Amazon pe register karta hai:
+1. **Event** generate hota hai: `{ "source": "seller.registration", "type": "NEW_SELLER", "sellerId": "s_999" }`
+2. EventBridge ye event **bus** me leta hai
+3. **Rules** check karta hai — "kya karna hai is event ke saath?"
+4. Match milta hai → trigger hote hain:
+   - **Lambda** → "New seller welcome email bhejo"
+   - **Step Functions** → "KYC verification process start karo"
+   - **SQS** → "Support team queue me daalo"
+   - **SNS** → "Admin team ko notify karo"
+
+**EventBridge vs SNS vs SQS:**
+
+| Feature | EventBridge | SNS | SQS |
+|---------|------------|-----|-----|
+| Pattern | **Event bus** (rules match events) | **Pub/Sub** (topic → subscribers) | **Queue** (producer → consumer) |
+| Filtering | **Advanced** (content-based, schema) | Basic (message attributes) | ❌ (no filter) |
+| Schema registry | ✅ (event schema discover karo) | ❌ | ❌ |
+| Targets | 20+ AWS services + custom HTTP | Email, SMS, SQS, Lambda, HTTP | Lambda, EC2, ECS, SQS itself |
+| SaaS integration | ✅ (Zendesk, Shopify, Datadog) | ❌ (SNS webhooks manual) | ❌ |
+| Event replay | ✅ (replay past events) | ❌ | ❌ |
+
+**Key features:**
+- **Event bus** — events ka central highway
+  - **Default bus** — AWS services ke events (EC2 state change, S3 put, etc.)
+  - **Custom bus** — aapke custom events
+  - **Partner bus** — SaaS apps se events (Datadog, PagerDuty, Zendesk, Shopify)
+- **Rules** — filter events + route to targets
+- **Schema Registry** — event structure discover karo, code generation
+- **Schema Discovery** — automatically detect event schema
+- **Event replay** — purane events replay karo (testing/debugging)
+- **Archive** — events store karo (up to 1 year)
+
+**EventBridge vs CloudWatch Events:**
+```
+EventBridge = CloudWatch Events (old) + New Features:
+              • Custom event buses
+              • Partner integrations (SaaS)
+              • Schema registry
+              • Event replay
+```
+
+**Common targets (where events can go):**
+| Target | Use |
+|--------|-----|
+| **Lambda** | Run serverless function |
+| **SQS** | Queue message for processing |
+| **SNS** | Send notification |
+| **Step Functions** | Start workflow |
+| **ECS / EKS** | Run task |
+| **Kinesis** | Stream data |
+| **API Gateway** | Call HTTP endpoint |
+| **CloudWatch Logs** | Log event |
+
+**EventBridge rules example:**
+```json
+{
+  "event-source": ["aws.ec2"],
+  "detail-type": ["EC2 Instance State-change Notification"],
+  "detail": { "state": ["stopped", "terminated"] }
+}
+```
+→ Agar koi EC2 stop/terminate ho → trigger Lambda to notify admin
+
+**Real-world architecture:**
+```
+EC2 (state change) ──┐
+S3 (file upload)  ──┤
+Lambda (error)    ──┤──→ EventBridge Bus ──→ Rules ──→ Targets
+Custom App event  ──┤
+SaaS (Shopify)    ──┘
+```
+
+**Analogy:** EventBridge = **Post office sorting center** — letters (events) aate hain, unka type/pata dekhte hain, fir sahi jagah bhej dete hain. Naya system (EventBridge) advanced filters + schema registry + replay bhi karta hai.
+
+## Step Functions
+
+Step Functions ek **serverless workflow orchestration** service hai jo multiple AWS services ko ek sequence me chain karti hai. Aap ek **state machine** banate ho jisme har step ek task hota hai — Lambda, SQS, SNS, DynamoDB, etc.
+
+**Example — Amazon ka "Order to Delivery" workflow:**
+Amazon par iPhone order karne ke baad ye sab hota hai:
+```
+Order Placed
+    ↓
+Step 1: Validate Payment → [Lambda]
+    ↓
+Step 2: Check Inventory → [Lambda → DynamoDB]
+    ↓
+Step 3 (Parallel):
+    ├── Update Inventory → [DynamoDB]
+    └── Charge Customer → [Lambda → Payment Gateway]
+    ↓
+Step 4: Notify Warehouse → [SQS]
+    ↓
+Step 5: Send Confirmation Email → [SNS → SES]
+    ↓
+Complete
+```
+Step Functions is poori workflow ko **orchestrate** karta hai — ek fail hua to retry/rollback, parallel steps, human approval.
+
+**Why not just use Lambda + SQS manually?**
+- **Lambda + SQS:** Code me saari logic likhni padegi — retry, error handling, state management, timeouts
+- **Step Functions:** Visual drag-drop, auto retry, built-in error handling, execution history
+
+**Key concepts:**
+- **State Machine** — aapki workflow ka blueprint
+- **State** — ek step in the workflow
+- **Task** — actual work (Lambda, Activity, API call)
+- **Choice** — if-else branching
+- **Parallel** — parallel branches
+- **Map** — array ke har item ke liye same task
+- **Wait** — delay karo (10 sec, 1 hour, until date)
+- **Pass** — input/output manipulate karo
+- **Fail / Succeed** — explicit failure/success
+
+**State Machine types:**
+
+| Type | Max Duration | Use Case |
+|------|-------------|----------|
+| **Standard** | 1 year | Long-running, auditable, exactly-once |
+| **Express** | 5 min | High-throughput, at-least-once (cheaper, faster) |
+
+**Standard vs Express:**
+
+| Feature | Standard | Express |
+|---------|----------|---------|
+| Duration | Up to 1 year | Up to 5 minutes |
+| Execution rate | 2000/sec | 100,000/sec |
+| Pricing | Per state transition | Per execution + duration |
+| History | ✅ Full (CloudWatch Logs) | ✅ (CloudWatch Logs) |
+| When to use | Order processing, human approval | IoT events, real-time streaming, high volume |
+
+**Error handling (built-in):**
+
+| Strategy | Kya hota hai |
+|----------|-------------|
+| **Retry** | Max attempts, backoff, interval set karo |
+| **Catch** | Fail hone par specific path pe bhejo (fallback) |
+| **Timeout** | Har state ka max time limit set karo |
+| **Heartbeat** | Long tasks — periodic "I'm alive" signal |
+
+**Example — retry policy:**
+```json
+"Retry": [
+  {
+    "ErrorEquals": ["Lambda.ServiceException"],
+    "IntervalSeconds": 2,
+    "MaxAttempts": 3,
+    "BackoffRate": 2
+  }
+]
+```
+Fail → wait 2 sec → retry → wait 4 sec → retry → wait 8 sec → fail
+
+**Human approval pattern:**
+```
+Task A → Send Approval Email → Wait for callback
+    ↑
+[SNS Email: "Approve this order?"]
+    ↓
+User clicks "Approve" → API Gateway → Step Functions callback → Continue
+```
+
+**Step Functions vs EventBridge:**
+
+| Feature | Step Functions | EventBridge |
+|---------|---------------|-------------|
+| Purpose | **Workflow orchestration** (sequential/parallel steps) | **Event routing** (event → target) |
+| State | ✅ **Stateful** — remembers where you are | ❌ Stateless |
+| Long-running | ✅ (1 year) | ❌ (event instant) |
+| Human approval | ✅ (pause + wait for callback) | ❌ |
+| Error handling | ✅ Built-in (retry, catch) | ❌ (rely on target) |
+| Visual debugging | ✅ (execution graph) | ❌ |
+
+**When to use what:**
+- **EventBridge:** "Event aaya → karo" (fire and forget)
+- **Step Functions:** "Karo ye, phir wo, phir ye — agar fail hua to retry" (orchestration)
+
+**Step Functions + Lambda = Serverless workflow:**
+```
+API Gateway → Step Functions → Lambda → DynamoDB → SNS
+```
+Transactions rollback, retry logic, timeout handling — sab built-in.
+
+**Pricing:**
+- **Standard:** $0.025 per 1000 state transitions
+- **Express:** $1.00 per 1 million executions + $0.0001 per 100ms duration
+
+**Analogy:** Step Functions = **Factory assembly line** — product (data) ek step se doosre step pe jaata hai, har station kuch kaam karta hai. Koi station fail ho to robot (retry) fix karta hai, nahi to supervisor (catch) ko inform karta hai.
+
+
