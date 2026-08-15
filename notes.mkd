@@ -2271,4 +2271,91 @@ Transactions rollback, retry logic, timeout handling — sab built-in.
 
 **Analogy:** Step Functions = **Factory assembly line** — product (data) ek step se doosre step pe jaata hai, har station kuch kaam karta hai. Koi station fail ho to robot (retry) fix karta hai, nahi to supervisor (catch) ko inform karta hai.
 
+## MWAA (Amazon Managed Workflows for Apache Airflow)
+
+MWAA AWS ka **managed Apache Airflow** service hai. Apache Airflow ek open-source **workflow orchestration** tool hai jo data pipelines (ETL, batch jobs, data processing) ko **Python code (DAGs)** se define karke schedule karta hai. MWAA matlab Airflow ka poora setup/servers AWS manage karta hai — aapko sirf DAGs likhne hain.
+
+**Example — Amazon ka daily sales report:**
+Amazon ko har subah 4 baje poore din ka sales report chahiye:
+1. Data Engineer ek **DAG** likhta hai: "Subah 4 baje: raw sales data S3 se uthao → clean karo → Redshift me load karo → report email karo"
+2. Airflow jo DAG ko **schedule** pe chalaata hai — har roz 4 AM
+3. Har task ek step hai — agar ek fail ho to next task nahi chalega, retry hoga
+4. Web UI pe pura graph, logs, status dikhta hai
+
+**Airflow core concepts:**
+
+- **DAG (Directed Acyclic Graph)** — aapki workflow ka blueprint, **Python file** me likha jata hai
+- **Task** — ek kam ka unit (jaise: extract, transform, load)
+- **Operator** — task ka type (PythonOperator, BashOperator, S3Operator, GlueJobOperator)
+- **Schedule** — kab chalna hai (cron: `0 4 * * *`, every hour, etc.)
+- **Scheduler** — DAG ko monitor karta hai aur schedule pe trigger karta hai
+- **Worker** — actual tasks execute karta hai
+- **Web Server (UI)** — DAGs, runs, logs dekhne ka dashboard
+- **XCom** — tasks ke beech data share karna
+
+**Example DAG:**
+```python
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from datetime import datetime
+
+def extract(): ...
+def transform(): ...
+def load(): ...
+
+with DAG('daily_sales_report', schedule='0 4 * * *', start_date=datetime(2026, 1, 1)) as dag:
+    e = PythonOperator(task_id='extract', python_callable=extract)
+    t = PythonOperator(task_id='transform', python_callable=transform)
+    l = PythonOperator(task_id='load', python_callable=load)
+    e >> t >> l   # order define karo
+```
+
+**MWAA key points:**
+- **Fully managed** — Airflow setup, scaling, patching, HA — sab AWS sambhalta hai
+- **S3 integration** — aapke DAGs aur plugins **S3 bucket** me store hote hain, MWAA wahan se pick karta hai
+- **Environment sizes** — Small / Medium / Large (workers aur performance ke hisaab se)
+- **Integrations** — S3, Glue, EMR, Lambda, Redshift, Athena, EC2, databases ke saath chalta hai
+- **Security** — VPC me chalta hai, IAM roles se AWS services access karta hai
+- **Auto-scaling** — workers load ke hisaab se automatically scale hote hain
+- **Web UI** — Airflow console (Graph, Gantt, Tree, Logs) check kar sakte ho
+
+**Setup steps:**
+
+1. **S3 bucket banao** — jisme DAGs folder `dags/` aur requirements file hongi
+2. **MWAA environment banao**
+   - AWS Console → Amazon MWAA → "Create environment"
+   - S3 bucket point karo, version pick karo (Airflow 2.x), size choose karo
+   - VPC select karo (private subnets recommended), execution role banao
+3. **DAGs upload karo** — DAG file banao, `s3://my-bucket/dags/` me upload karo
+   ```bash
+   aws s3 cp my_dag.py s3://my-bucket/dags/
+   ```
+4. **Web UI kholo** — MWAA console se "Open Airflow UI" → DAGs enable karo
+5. **Environment update karo** (requirements/plugins add karne ke liye)
+
+**MWAA vs Step Functions:**
+
+| Feature | MWAA (Airflow) | Step Functions |
+|---------|---------------|----------------|
+| Definition | **Python code (DAGs)** | JSON/YAML state machine |
+| Best for | **Data pipelines / ETL** (complex DAGs, dependencies) | Serverless app workflows (Lamba steps) |
+| Scheduling | ✅ Cron, advanced (backfill, catchup) | ❌ (EventBridge se schedule karna padta hai) |
+| Open source | ✅ (Apache Airflow, portable) | ❌ (AWS only) |
+| UI | ✅ Full web UI (Graph, Logs, Calendar) | ✅ (Console pe graph) |
+| Retry/error handling | Per-task retries | ✅ Built-in states |
+| Pricing | Per environment per hour (always running) | Pay per execution |
+
+**When to use MWAA:**
+- **ETL / data pipelines** — S3 → Glue/Spark → Redshift → report
+- **Complex dependencies** — hundreds of tasks, branching, backfills
+- **Team already knows Python** — code-first approach chahiye
+- **Open-source portability** — future me GCP/Azure pe bhi chahiye
+
+**Pricing:**
+- Per **environment size** per hour (jaise Small ~$0.45/hr, Medium ~$0.90/hr, Large ~$1.80/hr — approx)
+- Data transfer + optional S3/CloudWatch costs alag
+- Dhyaan rakho: environment 24x7 chalta hai — cost bhi 24x7 lagti hai
+
+**Analogy:** MWAA = **Smart factory supervisor** — aap supervisor ko *instructions ki book* (Python DAGs) dete ho, wo har din same time pe workers se tasks karwata hai, fail hone par retry karta hai, aur report de deta hai. Aapko factory ki building (servers) khud nahi banana padti — MWAA ready-made factory deta hai.
+
 

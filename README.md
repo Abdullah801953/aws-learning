@@ -75,6 +75,7 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 | **SQS (Simple Queue Service)** | Decoupled message queues for async processing |
 | **EventBridge** | Event-driven routing between AWS services |
 | **Step Functions** | Visual workflow orchestration |
+| **MWAA** | Managed Apache Airflow — ETL/data pipeline orchestration via Python DAGs |
 
 ### ⚙️ Configuration & Management
 | Service | What it does |
