@@ -57,6 +57,7 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 | **DMS** | Database migration service |
 | **ElastiCache** | In-memory caching (Redis/Memcached) |
 | **MemoryDB** | Durable, Redis-compatible in-memory database |
+| **EMR** | Managed big data processing — Hadoop/Spark clusters on EC2 |
 
 ### 🤖 AI / Machine Learning
 | Service | What it does |

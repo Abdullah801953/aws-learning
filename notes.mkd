@@ -2472,4 +2472,125 @@ IoT devices / app events → Kinesis Data Streams → (Lambda process) → S3
 
 **Analogy:** S3 data lake = **Giant warehouse** — saara saman (data) yahan rakha hai, kisi bhi safe ke bina. Athena = **Counter clerk** jo warehouse se sirf wo cheez laata hai jo aapne seekhi (query) — wo poori warehouse nahi uthata (partition + Parquet = clerk ko exact rack pata hai).
 
+## EMR (Elastic MapReduce)
+
+EMR AWS ka **managed big data processing** service hai jo **Hadoop ecosystem** (Spark, Hive, HBase, Flink, Presto) ko **EC2 clusters** pe chalti hai. Aapko clusters manually setup nahi karne padte — EMR EC2 instances launch karta hai, framework install karta hai, scale karta hai, aur khatam hone par band kar deta hai (auto-terminate).
+
+**Example — Amazon ka 1TB sales data analysis:**
+Amazon ke paas har din terabyte data aata hai (orders, clicks, inventory):
+1. Data S3 me hai (raw/ folder)
+2. Amazon **EMR cluster** launch karta hai (say 10x m5.xlarge + 1 master)
+3. **Spark job** submit karta hai: "S3 se data padho → clean karo → trends nikalo → result wapas S3 me"
+4. Cluster 1000+ cores pe parallel kaam karta hai — kuch minut me khatam
+5. Job complete → cluster **auto-terminate** → sirf itne ka bill
+6. Koi permanent server nahi — sirf job ke waqt cost
+
+**EMR se kya kya kiya ja sakta hai:**
+
+| Framework | Use Case |
+|-----------|----------|
+| **Spark** | Fast in-memory processing, ML pipelines, SQL (most popular) |
+| **Hadoop MapReduce** | Traditional batch processing (disk-based) |
+| **Hive** | SQL-like queries on huge datasets (data warehouse pe) |
+| **HBase** | NoSQL database on top of HDFS |
+| **Presto/Trino** | Interactive SQL on S3 data (fast queries) |
+| **Flink** | Real-time stream processing |
+| **Hue** | Web UI for Hive, SQL editor |
+
+**Key concepts:**
+
+- **Cluster** — 10-100s EC2 instances ka group jo ek saath kaam karta hai
+- **Master node** — cluster ka "brain" — tasks coordinate karta hai, kind daata jobs
+- **Core nodes** — data store (HDFS) + computation — naya data yahan aa sakta hai
+- **Task nodes** — sirf computation, optional scale-up (spot instances ke liye best)
+- **EMRFS** — EMR + S3: HDFS ki jagah S3 ko data store banao (sasta + durable)
+- **Bootstrap actions** — cluster start hote waqt custom setup (packages install karo)
+- **Steps** — ek cluster pe multiple jobs order me chalana
+- **Auto-scaling** — load ke hisaab se nodes add/remove
+- **Notebooks** (EMR Studio) — Jupyter-style development, interactive queries
+
+**Cluster nodes diagram:**
+```
+EMR Cluster
+├── Master Node (1) — resource manager, job tracker, web UI
+├── Core Node (2-20) — Spark executors + HDFS/EMRFS data
+└── Task Node (0-20, optional) — pure compute, spot pe sasta
+        ↓
+All nodes S3 se data padhte/likhte hain (EMRFS)
+```
+
+**EMR vs Glue vs Athena — kab kya use karein?**
+
+| Feature | EMR | Glue | Athena |
+|---------|-----|------|--------|
+| Type | Managed clusters (EC2) | Serverless ETL | Serverless SQL |
+| Best for | **Complex transformations**, ML, custom code (Spark) | ETL pipelines (crawl → transform → load) | Quick ad-hoc SQL queries |
+| Languages | Python (PySpark), Scala, Java, SQL | Python (Spark-based) | SQL only |
+| Control | ✅ Full control (cluster tuning) | Medium (jobs defined) | ❌ (query only) |
+| Cost | Per node per second | Per job execution | Per data scanned |
+| Setup time | Cluster launch ~5-15 min | Job definition | Immediate |
+| When | 100GB+ heavy jobs, ML, custom logic | Repeatable ETL pipelines | Explore/verify data fast |
+
+**EMR vs Redshift:**
+
+| Feature | EMR | Redshift |
+|---------|-----|----------|
+| Purpose | General big data processing (any transformation) | Data warehouse (SQL analytics) |
+| Data format | Raw/any (CSV, JSON, Parquet) | Columnar-stored tables |
+| Best code | Spark/MapReduce | SQL |
+| Latency | Minutes (batch) | Sub-seconds (BI queries) |
+| Use case | Process first | Query fast repeated queries |
+
+**Cost optimization — Spot instances (important!):**
+- EMR nodes **Spot instances** pe chalao → **50-70%+ save** (task nodes ke liye best)
+- Core/master pe **On-Demand** rakho (data loss se bachne ke liye)
+- EMR vs EC2 khud: EMR ka **per-node premium** (~$0.02-0.12/hr per instance) — but setup, software, scaling, monitoring included
+
+**Setup steps:**
+
+1. **S3 data lake ready rakho** — raw data `s3://data-lake/raw/` me
+2. **EMR cluster banao**
+   - AWS Console → EMR → "Create cluster"
+   - Choose release (EMR 7.x) + applications (Spark, Hive...)
+   - Instance types (master: m5.xlarge, core: m5.xlarge), count (`start 4, max 10`)
+   - **Region & VPC** select karo, **IAM role** attach karo (EC2 → S3 access)
+3. **Job submit karo**:
+   ```bash
+   # Spark job (EMR on EKS/EMR CLI pe)
+   aws emr add-steps --cluster-id j-XXXX --steps Type=Spark,Name=ETL,ActionOnFailure=CONTINUE,Args=[s3://scripts/etl.py,--deploy-mode,cluster]
+   ```
+   Ya EMR Studio notebook se PySpark chalado
+4. **Monitor karo** — EMR console pe cluster health, step logs, Spark UI
+5. **Terminate karo** (ya `--auto-terminate` set karo) — job ke baad khud band ho jaye
+6. **S3 me result check karo** — output `s3://data-lake/processed/`
+
+**EMR + S3 = data lake processing standard:**
+```
+S3: raw/ (CSV/JSON logs)
+   ↓
+EMR (Spark):
+   - read from S3
+   - clean/transform/aggregate
+   - write results → back to S3 (Parquet)
+   ↓
+S3: processed/
+   ↓
+Athena / Redshift Spectrum / QuickSight → analytics
+```
+
+**Important points:**
+- **ETL pipelines** — Glue easier hai, EMR jab full control chahiye
+- **Auto-terminate** use karo — bhool se cluster chalte rehne pe costly bill
+- **Idle cluster** = idle bill — 15 min no jobs → terminate
+- Long-running clusters: only jab predictable recurring jobs hain
+- Security: cluster ko **private subnet** me rakho, security groups tight karo
+- **EMRFS + S3 versioning** — accidental delete se data safe
+
+**Pricing:**
+- **EC2 instance cost** (per second) + **EMR premium** per node
+- Spot = 50-70% sasta
+- Region, instance type ke hisaab se change hota hai
+
+**Analogy:** EMR = **Heavy machinery rental company** — aapko sirf kaam ke liye 10 cranes (nodes) chahiye? Rent karo 2 din ke liye, kaam karo, wapas de do. Cranes khareedne (permanent servers) ki zaroorat nahi. Spot instance = thodi si choti cranes jo aur sasti hain lekin kabhi bhi waapas maangi ja sakti hain.
+
 
