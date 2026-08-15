@@ -4544,6 +4544,149 @@ Ya Cursor/Claude Desktop settings me add karo.
 
 **Analogy:** MCP = **USB-C port for AI** — pehle har device (tool) ka apna charger (API) hota tha; ab ek standard port — koi bhi AI assistant (phone) kisi bhi device (AWS services/docs/tools) ko plug-in karke use kar sakta hai. AWS MCP servers = **USB-C adapters for AWS** — AWS ka poora ecosystem AI assistants ke liye plug-and-play.
 
+## IAM (Identity & Access Management)
+
+IAM AWS ki **permission and identity management** service — jo control karti hai **kaun (identity) kya kar sakta hai (permissions) kisi bhi AWS resource pe**. Root account ke andar **users, groups, roles, policies** banake access manage karte ho. **Security ka foundation** — AWS me sab kuch IAM se hi hota hai.
+
+**Example — Amazon ka team:**
+Amazon ki team me 3 log:
+- **Dev:** Lambda/S3 resources bana sakta hai — sirf dev environment
+- **Ops:** Server restart, logs dekh sakta hai — prod pe bhii
+- **Finance:** Sirf cost reports (Billing) — koi resource nahi
+
+1. IAM me **3 users** (dev, ops, finance) + **groups** (Developers, Operators, Finance)
+2. Har group pe **policies**: "Developers → Lambda + S3 access", "Finance → readonly Billing"
+3. User ne galat kaam kiya? Policy tight karo ya user remove
+4. Security: **MFA**, password policy, **access keys** limited
+
+**IAM core concepts:**
+
+| Concept | Kya hai |
+|---------|---------|
+| **User** | Ek person/service ka login (long-term credentials) |
+| **Group** | Users ka set — ek policy group pe laga do, sabko milegi |
+| **Role** | Temporary credentials — services/apps ke liye (short-term) |
+| **Policy** | Permissions ka document (JSON) — Allow/Deny |
+| **Permission boundary** | User/role ki max limit (safety cap) |
+| **Access key** | CLI/SDK ke liye (Access Key ID + Secret) — rotate karo |
+| **MFA** | Multi-factor authentication — extra security |
+| **Identity Provider (IdP)** | External login (Google Workspace, Microsoft Entra ID, company SSO) |
+
+**Policy (JSON) example:**
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::my-app-assets",
+        "arn:aws:s3:::my-app-assets/*"
+      ]
+    },
+    {
+      "Effect": "Deny",
+      "Action": "s3:DeleteBucket",
+      "Resource": "*"
+    }
+  ]
+}
+```
+- **Effect:** Allow / Deny
+- **Action:** kaunse operations (`s3:GetObject`, `ec2:StopInstances`)
+- **Resource:** kin cheezon pe (ARN — bucket, instance, `*` = sab)
+- **Condition** (optional): IP, time, MFA required, tags
+
+**Policy types:**
+
+| Type | Kya hai |
+|------|---------|
+| **Managed policies** | AWS ready (Admin, ReadOnly) ya customer-created — multiple users attach |
+| **Inline policies** | Bir user/role pe directly (custom) |
+| **Resource-based** | Resource pe laga hota hai (S3 bucket policy, role trust policy) |
+| **Identity-based** | User/group/role pe attached |
+
+**Users vs Roles — kab kya?**
+
+| Feature | User | Role |
+|---------|------|------|
+| Eligible | Humans (long-term credentials) | Services/apps (temp credentials) |
+| Credentials | Password + Access keys (static) | **STS temp keys** (auto-expire) |
+| Example | Developer login console/CLI | EC2 → S3 read, Lambda → DynamoDB |
+| Best practice | Minimum users — SSO/IdP prefer karo | **Hamesha roles** — code me keys nahi |
+
+**Roles — services ke liye:**
+- **EC2 role:** IAM role attach → EC2 S3 access (no keys in instance)
+- **Lambda role:** function ki permissions
+- **Service-linked roles:** AWS services apne liye (auto-created)
+
+**Trust policy example (role):**
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": { "Service": "ec2.amazonaws.com" },
+    "Action": "sts:AssumeRole"
+  }]
+}
+```
+
+**IAM best practices:**
+- **Root account sirf root ke liye** — MFA + NEVER daily use
+- **Least privilege** — jitni zaroorat utni hi permission
+- **Groups use karo** — users pe directly mat laga
+- **Roles use karo** — code me keys mat rakho
+- **MFA** — har user par
+- **Access keys rotate** karo + unused keys delete
+- **Password policy** strong (length, expiry)
+- **Audit** — IAM Access Analyzer, CloudTrail se grant issues
+
+**IAM Identity Center (SSO):**
+- Ek hi login se multiple accounts/regions (enterprise)
+- Company AD/Entra ID se connect — users kay hi set
+- **Permission sets** — same permissions multiple accounts me apply
+- Replacement of "users groups ke siwa bahut saare users"
+
+**CLI examples:**
+```bash
+# User banao + console password
+aws iam create-user --user-name dev-user
+aws iam attach-user-policy \
+  --user-name dev-user \
+  --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+
+# Group + policy
+aws iam create-group --group-name Developers
+aws iam add-user-to-group --group-name Developers --user-name dev-user
+aws iam attach-group-policy \
+  --group-name Developers \
+  --policy-arn arn:aws:iam::aws:policy/AWSLambda_FullAccess
+
+# Role (EC2 → S3)
+aws iam create-role --role-name ec2-s3-role \
+  --assume-role-policy-document file://trust-policy.json
+aws iam attach-role-policy \
+  --role-name ec2-s3-role \
+  --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+```
+
+**Setup steps (console):**
+1. Console → IAM → **Users** → "Create user" → name + access type (programmatic/console)
+2. Permissions: group se attach (ya policy directly)
+3. **Access keys** generate → CLI config (`aws configure`)
+4. **MFA device** add karo (recommended)
+5. **Roles** — IAM → Roles → Create → trust entity (EC2/Lambda/service) → permissions
+6. **Test karo** — as user login → apna access check
+
+**Pricing:** IAM **free** — sirf resource you interacting wale cost.
+
+**Analygy:** IAM = **Office security system + badge card** — har employee (user) ka badge (credentials) hai, departments (groups) me badges, aur security rules (policies) batati hain kaun kis room (resource) me ja sakta hai. Role = **Visitor pass** — contractor (EC2 app) ko temporary pass — kuch ghar (S3) me allowed, ghar ki key (access keys) permanent nahi. MFA = **Card + fingerprint** — do factor. Least privilege = sirf wahi rooms kholo jo kaam ke liye chahiye.
+
 **CDK best practices (quick):**
 - Small focused stacks (poora infra ek stack me mat dalo)
 - `cdk diff` review hamesha — accidental changes se bacho

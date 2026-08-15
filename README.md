@@ -20,7 +20,7 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 ### 🛡️ Security, Identity & Compliance
 | Service | What it does |
 |---|---|
-| **IAM** | Access control via policies, users, roles |
+| **IAM** | Identity & access management — users, groups, roles, policies |
 | **AWS WAF** | Application-layer firewall — SQL injection, XSS, bad bots, rate limiting |
 | **AWS Shield** | DDoS protection |
 | **ACM (Certificate Manager)** | SSL/TLS certificate issuance & management |
