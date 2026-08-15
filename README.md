@@ -61,6 +61,7 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 | **Athena** | Serverless SQL queries directly on S3 data — pay per query |
 | **Glue** | Serverless ETL — crawlers, Data Catalog, PySpark jobs |
 | **Redshift** | Petabyte-scale data warehouse — fast columnar SQL analytics |
+| **QuickSight** | Cloud BI — interactive dashboards & reports (Athena/Redshift native) |
 
 ### 🤖 AI / Machine Learning
 | Service | What it does |
