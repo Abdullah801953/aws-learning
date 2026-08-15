@@ -67,6 +67,7 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 | **CloudTrail** | Audit logging — records every API call for security & compliance |
 | **Config** | Resource configuration tracking & compliance rules |
 | **X-Ray** | Distributed tracing — debug requests across microservices |
+| **CodeBuild** | Managed CI/CD build & test service (part of CodeSuite) |
 
 ### 🤖 AI / Machine Learning
 | Service | What it does |

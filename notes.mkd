@@ -3484,5 +3484,117 @@ API Gateway ──→ Lambda validate ──→ DynamoDB
 
 **Analogy:** X-Ray = **Tracker app for your request** — delivery (request) ka live status: "kahan hai, kitna aage badha, kis stop pe atka". Service map = **Delivery route map** — saare stops (services) + har stop ka time. CloudWatch = **Weather radar** — infrastructure health watch karta hai, but request ka detailed journey X-Ray ka kaam hai.
 
+## CodeBuild (CI/CD)
+
+CodeBuild AWS ki **fully managed build service** hai — jo aapke source code ko **compile, test aur package** karti hai. Jad bhi developer code push kare, CodeBuild **build environment** me us code ko binary/deployable artifact bana deta hai. **CI/CD ka "C" (Continuous Integration)** — manual build servers nahi lagane padte.
+
+**Example — Amazon ka mobile app CI:**
+Amazon ka app developers push karte hain:
+1. Code repository (GitHub/CodeCommit) me push → **webhook** trigger
+2. **CodeBuild** source pull karta hai → **build environment** (container) me
+3. Build steps: dependencies install → `npm test` / `run tests` → `build` → **artifact** (zip)
+4. Artifact **S3** me stored — aur **CodePipeline** ka next step (CodeDeploy) ko pass
+5. Failed build → **notification** (SNS) — developer ko email — "tumhara build fail"
+6. Success → continue pipeline (deploy)
+
+**CI/CD kya hota hai?**
+
+```
+CI (Continuous Integration) → Continuous Delivery/Deployment (CD)
+Code push (developer) → Build (CodeBuild) → Test → Artifact → Deploy (CodeDeploy/Lambda/S3)
+```
+
+| Step | Service | Kya hota hai |
+|------|---------|--------------|
+| 1. Source | **CodeCommit** / GitHub / S3 / Bitbucket | Code repository |
+| 2. Pipeline | **CodePipeline** | Steps orchestrate (source → build → deploy) |
+| 3. Build | **CodeBuild** | Compile + test + package (artifact) |
+| 4. Deploy | **CodeDeploy** / ECS / Lambda / S3 | Artifact ko production pe push |
+
+**CodeBuild key features:**
+- **Fully managed** — koi servers, autoscale build, pay per build (build-minutes)
+- **Build environments** — ready-made images: Ubuntu, Amazon Linux, Node.js, Python, Java, Go, .NET — ya custom Docker image
+- **Buildspec file** (`buildspec.yml`) — build commands definition (written in repo)
+- **Artifacts** — build output S3 pe store
+- **VPC support** — private resources access (RDS, ALB tests)
+- **CloudWatch Logs** — build logs
+- **Batch builds** — multiple build definitions
+- **Caching** — dependencies cache (S3) — fast rebuilds
+
+**buildspec.yml example:**
+```yaml
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - npm install
+  pre_build:
+    commands:
+      - npm test
+  build:
+    commands:
+      - npm run build
+  post_build:
+    commands:
+      - echo "Build complete!"
+artifacts:
+  files:
+    - '**/*'
+  base-directory: dist
+```
+
+**Setup steps:**
+1. **Build project banao** — Console → CodeBuild → "Create build project"
+   - Source: GitHub (connect) / CodeCommit / S3
+   - Environment: OS + runtime (Ubuntu + Node 20) — image
+   - Service role (IAM) — S3 artifact + logs access
+   - Buildspec: **use repository's buildspec.yml** (ya inline)
+2. **Build run karo** — "Start build" (manual) ya pipeline/webhook auto
+3. **Build logs** — CloudWatch pe live logs
+4. **Artifacts check karo** — S3 artifact bucket
+
+**CLI example:**
+```bash
+# Build start karo
+aws codebuild start-build --project-name my-app-build
+
+# Build ka status
+aws codebuild batch-get-builds --ids "my-app-build:xxxx"
+```
+
+**CodeBuild vs Jenkins (self-hosted):**
+
+| Feature | CodeBuild | Jenkins |
+|---------|----------|---------|
+| Managed | ✅ Serverless | ❌ Server install/manage karo |
+| Scale | Auto | Manual agents |
+| Cost | Pay per build-minute | Server + agents 24x7 |
+| Setup | Minutes | Hours (plugins, config) |
+| Flexibility | Less (fixed structure) | Extreme (plugins, groovy) |
+| When | AWS-native, simple pipelines | Complex build processes, on-prem |
+
+**CodePipeline (related):**
+- CI/CD **orchestrator** — stages: Source → Build → Test → Deploy
+- CodeBuild pipeline ke **build stage** me chalti hai
+- CodePipeline + CodeBuild + CodeDeploy = full CI/CD
+
+**Pricing:**
+- **Free tier:** 100 build-minutes/month (Linux, small instance) — 1 year
+- After: ~$0.005/min (general) — Linux/Windows alag
+- **Savings:** Reserved capacity discounts (large teams)
+
+**Important points:**
+- **buildspec.yml** repository me — pipeline reproducible
+- **Tests chalao** — build me tests include karo, warna broken code deploy ho jayega
+- Artifacts S3 me — **versioning** bucket use karo
+- **Environment variables** — secrets abhi CodeBuild me — **Secrets Manager/SSM** reference karo
+- **Cache** — dependencies cache se build time 50%+ kam
+- Private code = **CodeCommit** (GitHub Actions alternate: GitHub-native)
+
+**Analogy:** CodeBuild = **Automatic kitchen (kitchen robot)** — aap recipe (source code) dete ho, kitchen (build environment) ready hai, robot steps follow karta hai (install, test, build) aur packaged dish (artifact) nikalta hai. Aapko plates (servers) nahi kharidni padti — robot rental hai. Jenkins = **Bande ka kitchen** — sirf tumhare ghar (server) me, tum khud sambhalo.
+
 
 
