@@ -4377,6 +4377,83 @@ WorkSpaces AWS ki **managed virtual desktop (VDI)** service — jisse aap cloud 
 
 **Analogy:** WorkSpaces = **Office desk in the sky** — workstation (PC, apps, files) cloud me ready hai — aap kisi bhi device se baith jao aur kaam karo. Device = **Sirf screen/monitor** (thin client) — asli computer cloud me hai. Data = office ke safe me — device chori ho jaye to kuch nahi jaata. EC2 = **Server room computer** — aap server ko RDP karte ho — WorkSpaces = **chaht waale desk** users ke liye ready-made.
 
+## Amazon Q (AI Assistant)
+
+Amazon Q AWS ki **generative AI assistant** hai — jo developers, IT aur business users ko AWS aur unke data pe help karti hai. **Do versions:**
+
+| Version | Kiske liye | Kya karta hai |
+|---------|-----------|---------------|
+| **Amazon Q Developer** | Developers/DevOps | Code assistant (IDE pe), AWS hello help — code generate, debug, migrate, CLI |
+| **Amazon Q Business** | Business users | Company data pe Q&A — docs, wikis, emails, connectors se |
+
+**Example — Amazon ka developer, "ye Lambda error kyun?"**
+1. Developer VS Code me Lambda code likh raha hai — error bhi mila
+2. **Amazon Q Developer** (IDE extension / chat)
+3. Q code context samajhta hai → error explain karta hai + **fix suggestion** deta hai
+4. Q AWS **best practices** bhi batata hai — cost, security (IAM, encryption)
+5. Business side: HR employee puchhta hai "HR policy kya hai?" → **Amazon Q Business** company docs se answer deta hai
+
+**Amazon Q Developer kya karta hai:**
+- **IDE/CLI chat** — VS Code, JetBrains, CLI me AI assistant
+- **Code generation** — functions, tests, bugfixes inline
+- **Code explanation & debug** — code maujida pe
+- **AWS resource help** — aws CLI commands, CloudFormation/Terraform templates generate
+- **`q` CLI** — terminal se: `q chat`, `q generate cloudformation`, `q translate`
+- **Upgrade assistance** — Java upgrades (8→17/21), .NET, Windows server migratiions (auto-transform)
+- **Code review / Agentic coding** — repo-level tasks, multi-file changes
+- **Security scanning** (Q Developer security) — code me vulnerabilities
+
+**Amazon Q Business kya karta hai:**
+- **Company knowledge base** — docs, SharePoint, Confluence, S3, Salesforce connect (50+ connectors)
+- **Q&A on company data** — "Leave policy", "Sales numbers Q1"
+- **Permissions-aware** — employee ko sirf wo data milega jiski access hai (IAM/AD se)
+- **Summaries/Reports** — meetings, emails summarize
+- **App creation** — non-devs simple applications (wizard)
+
+**Amazon Q vs ChatGPT — difference:**
+
+| Feature | Amazon Q | ChatGPT |
+|---------|----------|---------|
+| GenAI base | AWS models (Bedrock connected) | OpenAI (ChatGPT) |
+| Context | **AWS + aapka code/data** | Generic internet |
+| AWS expertise | ✅ Deep (services, CLI, infra) | Limited |
+| Company data access | ✅ Secure connectors (permissions) | ❌ (nhi hoti) |
+| Data privacy | Enterprise secure (no training on data) | Depends on plan |
+| Best for | AWS dev + business Q&A | General-purpose writing |
+
+**Setup steps:**
+1. **Q Developer (personal):**
+   - VS Code → Extensions → "Amazon Q" install → AWS login (Builder ID)
+   - Chat/Inline: Ctrl+I (inline), Ctrl+Enter (inline diff), select code → Ask Q
+   - CLI: `pip install aws-q-developer-cli` (ya bundled) → `q chat`
+2. **Q Business (company):**
+   - Console → Amazon Q Business → create application
+   - **DataSources connect** karo (S3, SharePoint, Confluence...)
+   - **Index** banao (vector search data)
+   - Permissions attach karo (IAM role, AD groups)
+   - Users ko app/web interface do → login → company Q&A
+3. **Q Developer (professional):** IAM Identity Center setup — enterprise policies
+
+**Amazon Q + other AWS AI:**
+- **Q = AI-assistant layer** (user-facing)
+- **Bedrock = models (FMs) API** — apps use karein
+- **SageMaker = train/deploy your own models**
+- Q Developer **uses Bedrock models** internally — aapko FMs directly nahi dikhte
+
+**Pricing:**
+- **Amazon Q Developer Pro:** ~$19/user/month
+- **Amazon Q Business:** ~$3/user/month (Q in QuickSight) ya ~$20/user/month (full)
+- Free tiers/dev offers exist — check current AWS page
+
+**Important points:**
+- Q Business **doesn't train on your data** — enterprise privacy (AWS guarantee)
+- **Permissions-aware** — sirf authorized data answer
+- Q Developer security scanning — separate add-on
+- Budget: 1000 lines/month free (developer tier) — check
+- For students/devs — **Q Developer $0** (Builder ID) use karo
+
+**Analogy:** Amazon Q = **AWS-specialized copilot** — aapke IDE ke andar expert jo AWS ke 200+ services jaanta hai aur aapka code bhi padh sakta hai. ChatGPT = **General encyclopedia** — sab kuch pata hai thoda-thoda. Q Business = **Company HR+helpdesk combined** — jo sirf authorized company docs ke mutabik jawab deta hai — data safe.
+
 **CDK best practices (quick):**
 - Small focused stacks (poora infra ek stack me mat dalo)
 - `cdk diff` review hamesha — accidental changes se bacho

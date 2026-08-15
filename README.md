@@ -75,6 +75,7 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 | **Amplify** | Full-stack dev platform — backend + hosting + CI/CD for web/mobile apps |
 | **AppSync** | Managed GraphQL API — real-time subscriptions, offline sync |
 | **WorkSpaces** | Managed virtual desktops (VDI) — Windows/Linux cloud desktops |
+| **Amazon Q** | AI assistant — Q Developer (coding) & Q Business (enterprise Q&A) |
 
 ### 🤖 AI / Machine Learning
 | Service | What it does |
