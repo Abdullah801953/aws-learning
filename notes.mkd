@@ -3713,5 +3713,93 @@ Fail? → rollback to v1 (traffic)
 
 **Analogy:** CodeDeploy = **Airplane cabin crew upgrade check** — plane (server) khud nahi badalti, lekin crew (app) ka version aur process oversees. Blue/Green = **Weather-based off-summer hotel switch** — naya hotel (Green) pehle ready, guests (traffic) shift, phir purana (Blue) band. Rolling = **Traffic signal ek-ek kar ke** — kabhi full road band nahi.
 
+## CodePipeline
+
+CodePipeline AWS ki **CI/CD orchestration service** — jo aapki **release pipeline** ko end-to-end manage karti hai: **Source → Build → Test → Deploy** — har stage ek door hai, har successful stage ke baad agla stage chalta hai. Ye **CodeCommit, GitHub, CodeBuild, CodeDeploy, Lambda, ECS, S3, CloudFormation** sab ko ek saath **aurchestrate** karta hai.
+
+**Example — Amazon ka app release pipeline:**
+1. Developer code push karta hai GitHub pe
+2. **Pipeline detect** karta hai (webhook) → Source stage (GitHub pull)
+3. **Build stage** — CodeBuild: test + build → artifact S3
+4. **Test stage** — CodeDeploy/ALB pe deploy → integration tests
+5. **Approval stage** — Manager ko email (manual approval) → Approve
+6. **Deploy stage** — CodeDeploy production pe blue/green deploy
+7. Fail hua → pipeline stops + notification, rollback config
+
+**Pipeline concepts:**
+
+| Concept | Kya hai |
+|---------|---------|
+| **Pipeline** | End-to-end release workflow (stages ka sequence) |
+| **Stage** | Logical step (Source, Build, Test, Deploy, Approval) |
+| **Action** | Stage ke andar ka task (CodeBuild run, S3 copy) |
+| **Artifact** | Stage ka output (source zip, build output) — S3 me stored |
+| **Transition** | Stage complete hone par agle pe move |
+| **Manual approval** | Stage — insaan approve kare tab aage jaye |
+| **Webhook/Event** | Source change (push) → pipeline auto-trigger |
+
+**Pipeline architecture (typical):**
+```
+Source          → Build      → Test        → Approval      → Deploy
+(GitHub/CodeCommit)  (CodeBuild)   (CodeDeploy)   (Manual: email)   (CodeDeploy/Lambda)
+     ↓                ↓              ↓                ↓                 ↓
+  Artifact:zip    Artifact:build   Integration test   manager approve   Production
+```
+
+**Actions/stages (real-world pipeline):**
+
+| Stage | Action (service) | Purpose |
+|-------|------------------|---------|
+| Source | GitHub / CodeCommit / S3 | Latest code pull |
+| Build | CodeBuild | Compile, test, package |
+| Deploy (QA) | CodeDeploy / ECS | Test environment |
+| Test | CodeBuild (integration tests) / Lambda | E2E tests |
+| Approval | Manual (SNS email) | Human gate |
+| Deploy (Prod) | CodeDeploy (blue/green) / CloudFormation / Lambda | Production release |
+
+**Setup steps:**
+
+1. **Pipeline banao** — Console → CodePipeline → "Create pipeline"
+   - **Source stage:** GitHub (connect) / CodeCommit repo → branch
+   - **Build stage:** CodeBuild project (ya create nayi)
+   - **Deploy stage:** CodeDeploy application / Lambda / ECS / S3 / CloudFormation
+2. **Artifact bucket** — CodePipeline apne S3 bucket me artifacts store karta hai (auto-creates)
+3. **Manual approval add karo:**
+   - Add stage → "Manual approval" action → SNS topic (email)
+   - Reviewer approve → next stage
+4. **Webhook/Event trigger** — GitHub push → pipeline auto-run (source change detection ON)
+5. **Run + monitor** — Console pe pipeline visual: green check ✅ / red ❌ per stage
+6. **Rollback** — deploy failed → CodeDeploy rollback; ya pipeline re-run (revision)
+
+**CLI examples:**
+```bash
+# Pipeline list
+aws codepipeline list-pipelines
+
+# Pipeline start (manual)
+aws codepipeline start-pipeline-execution --name my-app-pipeline
+```
+
+**CodePipeline vs Jenkins:**
+- CodePipeline = **AWS-native orchestration** (Code* services ek saath)
+- Jenkins via **CodePipeline Jenkins plugin** — hybrid (on-prem agents)
+- Jenkins = full custom (groovy/pipelines), halki learning curve; CodePipeline = visual, serverless
+
+**Pricing:**
+- **Free:** 1 pipeline free (30 days) — after: **$1 per active pipeline per month**
+- Extra: action executions (after 1 per month free) — ~$0.002 per action execution
+
+**Important points:**
+- **Active pipeline** = definition hi cost deti hai (runs free for first pipeline)
+- **Artifacts S3** — encryption enable karo (KMS)
+- **Retry** — failed stage pe "Retry" button (same action) 
+- **Cross-account/region** — pipelines multiple regions/accounts me deploy
+- **Notifications** — CloudWatch events: pipeline notified (SNS/Slack)
+- **Best practice:** Test + Approval stage production ke pehle
+- ECS deploy action = blue/green — ECS CodeDeploy integration
+- **Pipeline execution history** — 30 days (max 1000)
+
+**Analogy:** CodePipeline = **Assembly line conveyor** — har station (stage) ek kaam karta hai: station 1 code greht hai, station 2 build, station 3 test, wo bhi approval gate (insaan) khulti hai, aakhri station deploy. Ek station fail → poori line stop + alarm. Line khud chalti hai jab naya code (product) aata hai — aapko koi step manually nahi karna.
+
 
 
