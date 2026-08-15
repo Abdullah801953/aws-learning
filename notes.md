@@ -4292,6 +4292,91 @@ Client — normalized cache + real-time subscriptions
 
 **Analogy:** AppSync = **Buffet restaurant with recipe card** — aap chef (GraphQL schema) se kaho "mujhe sirf paneer aur salad chahiye" (query — sirf needed fields) — chef (AppSync) kitchen (DynamoDB/Lambda) se exactly wo laata hai — jo extra dish nahi (no over-fetch). Subscription = **Live kitchen cam** — dish (data) badla to aapko turant pata (real-time). API Gateway = **Fixed thali** — jo pakki list (endpoint) hai wahi milega.
 
+## WorkSpaces (VDI — Virtual Desktop)
+
+WorkSpaces AWS ki **managed virtual desktop (VDI)** service — jisse aap cloud me **Windows/Linux desktops** run karte ho. Employees apne PC/laptop/tablet se **remote login** karke apna **cloud desktop** use karte hain — OS, apps, files sab cloud me hain, device pe kuch install nahi. **Data device pe kabhi nahi jaata — security ke liye best.**
+
+**Example — Amazon ka customer support team:**
+1. Amazon ke call center agents ko har din khud ke desktop ki zaroorat hai
+2. **WorkSpaces** pe 500 Windows desktops provision — Amazon Linux/Windows, MS Office, support apps installed
+3. Agent apne kisi bhi device (thin client, laptop, tablet) se **WorkSpaces client** se login karta hai
+4. Pura desktop cloud me chalta hai — agent ka device sirf screen stream karta hai
+5. **Data (customer info) cloud me rehta hai** — agent ka USB/device data leak nahi ho sakta
+6. IT team centrally sab desktops manage karti hai — patches, apps, policies — ek jagah
+
+**WorkSpaces key features:**
+- **OS options** — Windows 10/11, Amazon Linux 2, Ubuntu — choose karo
+- **Bundles** — pre-configured CPU/RAM/storage combinations (Standard, Performance, Graphics)
+- **Billing** — hourly ya monthly — pay-as-you-go
+- **Multi-session** (workloads) — Windows 10 multi-user (one instance, many users) — cost kam
+- **Workspaces Web/Client** — any device: Windows/Mac/iPad/Android/browser/Chromebook
+- **Active Directory** — users/groups (AD connect) — SSO login
+- **BYOL** (Bring Your Own License) — MS Office licence apna — cost low
+- **Backup** — snapshots/restore
+- **Persistence** — data sab WorkSpaces pe (EBS) — device wipe ho jaye to data safe
+- **Security** — encryption (EBS+KMS), data stays AWS, device zero-trust
+
+**WorkSpaces vs Citrix/VMware:**
+
+| Feature | AWS WorkSpaces | Citrix/VMware (on-prem VDI) |
+|---------|----------------|------------------------------|
+| Setup | **Cloud-native — minutes** | Hardware + software infra pehle |
+| Infrastructure | AWS handles | Aap khud servers kharidte ho |
+| Cost model | Pay-as-you-go (hourly) | High Capex + Opex |
+| Scaling | Auto-bandho (few clicks) | Capacity planning |
+| Best for | Cloud-first, no data centers | Legacy on-prem VDI, existing investment |
+
+**WorkSpaces vs EC2 (desktop use):**
+
+| Feature | WorkSpaces | EC2 (RDP) |
+|---------|-----------|-----------|
+| Purpose | Desktops for users (VDI) | Servers |
+| Login | User + AD, WorkSpaces client | SSH/RDP admin |
+| Management | Console pe users/bundles | Full server admin |
+| Cost | Per-user hourly/monthly | Per instance 24x7 |
+| Best for | Employees, remote work | Dev/prod workloads |
+
+**Components:**
+- **WorkSpace** — ek user ka virtual desktop
+- **Bundle** — desktop ka "spec" — OS + instance type (Standard 2vCPU/8GB, Performance, Graphics.g4dn)
+- **Directory** — users ka source (AD Connector, Simple AD, AWS Managed AD)
+- **Client** — desktop/laptop/mobile app ya browser (Web client)
+- **Workspaces Pool (multi-user)** — users share underlying machines — cost optimized
+
+**Setup steps:**
+1. Console → Workspaces → **Create WorkSpaces**
+   - Directory banao (Simple AD ya connect apna Active Directory)
+   - Users add karo (AD users)
+   - **Bundle** select karo (OS + size: Standard Windows 10, 2 vCPU/8GB)
+   - Running mode: **AutoStop** (hourly billing, idle pe stop) ya AlwaysOn
+2. **Invite users** — user ko username/password → client install (ya browser)
+3. **Client login** — user apne device se → desktop ready
+4. **Manage** — console: reboot, rebuild, restore, backup, terminate
+
+**Pricing:**
+- **Hourly (AutoStop):** sirf jitna use — idle pe auto-stop — example: Standard Windows ~$0.26/hr
+- **Monthly:** fixed rate (~$32 Standard Windows) — no hourly
+- Storage extra (user volume ~10-100GB)
+- Workspaces Web/ browser — free additional
+- BYOL windows license options — cost optimize
+
+**Use cases:**
+- **Remote work** — team ko desktops do — kisi bhi device se
+- **Contractors** — temporary users ke liye desktops — hire/terminate fast
+- **Secure data** — sensitive info se — data device pe aa hi nahi sakta
+- **Dev/test environments** — developers ko linux/windows desktops
+- **Legacy apps** — applications jo sirf Windows pe chalti hain — cloud me run
+
+**Important points:**
+- **Data local nahi** — device pe kuch bhi persist nahi (security)
+- **AutoStop mode** — idle 60min → stop — cost cut (hourly billing)
+- **Encryption** default on — by default encrypt EBS/KMS
+- **Multi-session** pools — users same machine (Windows multi-session) — cost halved
+- **AD zaroori** — users authentication ke liye
+- **AppStream 2.0** (related) — apps streaming (bina full desktop) — whole desktop nahi chahiye to AppStream
+
+**Analogy:** WorkSpaces = **Office desk in the sky** — workstation (PC, apps, files) cloud me ready hai — aap kisi bhi device se baith jao aur kaam karo. Device = **Sirf screen/monitor** (thin client) — asli computer cloud me hai. Data = office ke safe me — device chori ho jaye to kuch nahi jaata. EC2 = **Server room computer** — aap server ko RDP karte ho — WorkSpaces = **chaht waale desk** users ke liye ready-made.
+
 **CDK best practices (quick):**
 - Small focused stacks (poora infra ek stack me mat dalo)
 - `cdk diff` review hamesha — accidental changes se bacho
