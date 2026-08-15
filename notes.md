@@ -4685,7 +4685,105 @@ aws iam attach-role-policy \
 
 **Pricing:** IAM **free** — sirf resource you interacting wale cost.
 
-**Analygy:** IAM = **Office security system + badge card** — har employee (user) ka badge (credentials) hai, departments (groups) me badges, aur security rules (policies) batati hain kaun kis room (resource) me ja sakta hai. Role = **Visitor pass** — contractor (EC2 app) ko temporary pass — kuch ghar (S3) me allowed, ghar ki key (access keys) permanent nahi. MFA = **Card + fingerprint** — do factor. Least privilege = sirf wahi rooms kholo jo kaam ke liye chahiye.
+**Analogy:** IAM = **Office security system + badge card** — har employee (user) ka badge (credentials) hai, departments (groups) me badges, aur security rules (policies) batati hain kaun kis room (resource) me ja sakta hai. Role = **Visitor pass** — contractor (EC2 app) ko temporary pass — kuch ghar (S3) me allowed, ghar ki key (access keys) permanent nahi. MFA = **Card + fingerprint** — do factor. Least privilege = sirf wahi rooms kholo jo kaam ke liye chahiye.
+
+## Identity Center (IAM Identity Center / SSO)
+
+IAM Identity Center (pehle **AWS SSO**) AWS ki **centralized access management** service — jo **ek hi login (SSO)** se users ko **multiple AWS accounts, applications aur permissions** deti hai. Company ke scale pe — jab doosre IAM users management bhaut bhaari ho jata hai — Identity Center sab kuch ek jagah se manage karta hai.
+
+**Example — Amazon ka company (100 employees, 50 accounts):**
+1. Amazon ke paas 50 AWS accounts hain (dev, prod, finance, hr...)
+2. 100 employees ko alag alag access chahiye har account me
+3. **IAM users** se to 100×50=5000 users banane padte ❌
+4. **Identity Center** se: users ek jagah (company directory), aur har account me **permission sets** (roles) — ek user ko assign karo
+5. **Ek login** — user ek baar login karta hai → saare assigned accounts/apps dikhte hain → click → access
+6. Company AD/Entra ID se connect — users auto-sync — no duplicate users
+
+**Core concepts:**
+
+| Concept | Kya hai |
+|---------|---------|
+| **Identity Center enabled** | SSO setup — users dir + instance |
+| **Users & Groups** | Identity Center me manage (ya AD/Entra se sync) |
+| **Permission Sets** | Roles ka re-usable set (jaise "Admin", "ReadOnly", "EC2-Admin") |
+| **AWS accounts** | Accounts assign karo → permission set attach karo user/group |
+| **Applications** | Third-party apps (Salesforce, Office 365) SSO se connect |
+| **Assignment** | User/group → account + permission set |
+| **Access portal URL** | User ka singleton login page (`d-xxxx.awsapps.com/start`) |
+
+**Architecture:**
+```
+Users (Identity Center dir / AD / Entra ID)
+     ↓ SSO (single login — portal)
+Identity Center (assignments + permission sets)
+     ├── AWS Account 1 → Permission Set A (Admin)
+     ├── AWS Account 2 → Permission Set B (ReadOnly)
+     ├── AWS Account 3 → Permission Set C (EC2-Admin)
+     └── Apps (Salesforce, O365, GitHub) → SSO SAML
+```
+
+**Permissions sets kya hote hain:**
+- **Permission set** = policy bundle + session duration (jo role user account me assume karta hai)
+- Managed policies ya custom (JSON) use karo
+- Same permission set ko multiple accounts me attach → consistency
+- Example:
+  - `Dev-Access`: Lambda + S3 read/write (dev accounts ke liye)
+  - `Prod-ReadOnly`: sab resources read
+  - `Billing`: sirf billing + cost explorer
+
+**How login works (user side):**
+```
+User → access portal URL → login (email/password + MFA)
+     ↓
+List: Account 1 (Admin) / Account 2 (ReadOnly) + Apps
+     ↓
+Click → STS assume role → console (ya CLI/API via SSO)
+```
+CLI: `aws sso login` → credentials auto-config — `aws sts get-caller-identity`
+
+**Identity Center vs IAM users:**
+
+| Feature | Identity Center (SSO) | IAM Users |
+|---------|----------------------|-----------|
+| Scale | **100s users / 100s accounts** easy | Painful (har account me users) |
+| Login | **Ek login** — saare accounts | Har account ka alag login |
+| MFA/SSO | Central (AD/Entra, SAML, Okta) | Individual |
+| Groups | Central groups + assignments | Per-account groups |
+| Best for | **Companies, multi-accounts, enterprise** | Single account, small teams, scripts |
+
+**Setup steps:**
+
+1. **Identity Center enable karo** — Console → IAM Identity Center → "Enable" (instance auto banata hai)
+   - Recommended: AWS Organizations (multi-account)
+2. **Identity source chuno:**
+   - **Identity Center directory** (built-in — Google/Entra sync supported) 
+   - **Active Directory** (AWS Managed AD / on-prem AD Connector)
+   - **External IdP** (Okta, Entra ID, Ping — SAML 2.0)
+3. **Users/groups banao** (ya AD se sync)
+4. **Permission sets banao:** Permission sets → "Create" → name + policies attached (AdministratorAccess ya custom)
+5. **Assign karo:** AWS accounts → select account → permission set → users/groups
+6. **User ko portal URL do** — user login → accounts dikhte hain
+7. **Default SSO** for console/CLI + `aws sso login` configure
+
+**CLI with Identity Center:**
+```bash
+# Console login first; CLI:
+aws configure sso
+# SSO session name, start URL, region, account, role → ok
+aws sso login   # browser login
+aws sts get-caller-identity  # check
+```
+
+**Important points:**
+- **Free service** — Identity Center koi extra cost nahi (AWS Organizations me)
+- **Permission sets** = session duration (default 1h) — short sessions best practice
+- **SCIM sync** — AD/Entra users auto provision
+- **Access Analyzer** — external access review (compliance)
+- **Attribute-based access control (ABAC)** — tags se permissions (dynamic)
+- **Service control policies (SCP)** — account-level limits (Organizations) — Identity Center ke saath deep
+- Identity Center **replaces IAM users** for humans — IAM users sirf service-to-service/scripts ke liye
+
+**Analogy:** Identity Center = **Company main gate with master badge** — ek baar badge (login) se saari buildings (accounts) ke saare allowed rooms (permission sets) khulte hain. IAM users = har building ka alag alag guard/lock. Permission set = "Master key for Building A, Visitor pass for B". Portal = **Company directory** — jahan sab buildings ka list + ek click me entry.
 
 **CDK best practices (quick):**
 - Small focused stacks (poora infra ek stack me mat dalo)

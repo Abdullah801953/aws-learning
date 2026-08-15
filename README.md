@@ -21,6 +21,7 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 | Service | What it does |
 |---|---|
 | **IAM** | Identity & access management — users, groups, roles, policies |
+| **Identity Center** | Centralized SSO — one login for multiple AWS accounts & apps |
 | **AWS WAF** | Application-layer firewall — SQL injection, XSS, bad bots, rate limiting |
 | **AWS Shield** | DDoS protection |
 | **ACM (Certificate Manager)** | SSL/TLS certificate issuance & management |
