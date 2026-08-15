@@ -62,6 +62,7 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 | **Glue** | Serverless ETL — crawlers, Data Catalog, PySpark jobs |
 | **Redshift** | Petabyte-scale data warehouse — fast columnar SQL analytics |
 | **QuickSight** | Cloud BI — interactive dashboards & reports (Athena/Redshift native) |
+| **Kinesis** | Real-time data streaming — Data Streams, Firehose, Analytics |
 
 ### 🤖 AI / Machine Learning
 | Service | What it does |
