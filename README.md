@@ -73,6 +73,7 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 | **CloudFormation** | Infrastructure as Code — infrastructure via YAML/JSON templates |
 | **CDK** | Infrastructure as Code in real languages (Python/TS) → CloudFormation |
 | **Amplify** | Full-stack dev platform — backend + hosting + CI/CD for web/mobile apps |
+| **AppSync** | Managed GraphQL API — real-time subscriptions, offline sync |
 
 ### 🤖 AI / Machine Learning
 | Service | What it does |

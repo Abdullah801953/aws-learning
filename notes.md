@@ -4171,6 +4171,127 @@ export const auth = defineAuth({
 
 **Analogy:** Amplify = **IKEA furniture for full app** — aapko har cheez alag alag nahi khareedni (Cognito, AppSync, S3, CloudFront — alag alag stores). Amplify = **One kit** — login (auth), data (database), storage, hosting sab box me aata hai — aap instructions (CLI/TS config) follow karte ho, sab ek saath ghar pe ready. Hosting = IKEA pickup wala delivery — ek click me deploy.
 
+## AppSync (GraphQL API)
+
+AppSync AWS ki **managed GraphQL API** service hai — jo apps ko ek **flexible, type-safe API** deti hai: client **exactly wo data** mangta hai jo chahiye (over-fetching nahi), aur **real-time subscriptions** (live updates) built-in hain. REST API ki jagah — ek hi endpoint se saare queries/mutations/subscriptions. **Amplify ka `add api` backend ke peeche AppSync hi hota hai.**
+
+**Example — Amazon shopping app:**
+Amazon ka app: product list, cart, orders, live stock updates chahiye:
+1. **GraphQL schema** define karo: `Product`, `Order`, `Cart` types + queries (products, orders) + mutations (addToCart, placeOrder)
+2. **Resolver** har field ko DynamoDB/Lambda se connect karta hai
+3. App **one query** me product + stock + reviews le sakta hai (REST me 3 API calls)
+4. **Subscription** — kisi aur ne order kiya → cart/stock **live update** (real-time)
+5. **Offline sync** — app internet na ho to bhi kaam karta hai, wapas aane par sync
+
+**GraphQL vs REST — basic difference:**
+
+| Feature | REST | GraphQL (AppSync) |
+|---------|------|-------------------|
+| Endpoints | Multiple (/products, /orders) | **Ek hi endpoint** (POST /graphql) |
+| Data fetching | Over/under-fetch (fixed response) | **Exactly jo maango** |
+| Versioning | /v1, /v2 endpoints | Schema evolution |
+| Real-time | WebSocket alag se | **Subscriptions built-in** |
+| Client cache | Manual | **Normalized cache** (Apollo) |
+
+**AppSync core components:**
+
+| Concept | Kya hai |
+|---------|---------|
+| **Schema** | Types + Queries/Mutations/Subscriptions ka definition (GraphQL SDL) |
+| **Resolver** | Field ka data kahan se aayega (DynamoDB, Lambda, HTTP, RDS, OpenSearch) |
+| **Data sources** | DynamoDB, Lambda, RDS, HTTP, OpenSearch, Aurora |
+| **Subscription** | Live updates — client subscribe karta hai, data change pe push |
+| **Auth modes** | API key, Cognito, IAM, OIDC, Lambda authorizer |
+| **Offline/Conflict resolution** | Offline mutations queue → sync → conflict resolve (last-writer-wins ya Lambda) |
+| **AppSync APIs vs GraphQL endpoints** | Managed service vs khud GraphQL server |
+
+**Schema example:**
+```graphql
+type Product {
+  id: ID!
+  name: String!
+  price: Float!
+  stock: Int!
+}
+
+type Query {
+  products: [Product!]!
+  product(id: ID!): Product
+}
+
+type Mutation {
+  updateStock(id: ID!, stock: Int!): Product!
+}
+
+type Subscription {
+  onStockChange(id: ID!): Product
+    @aws_subscribe(mutationFields: ["updateStock"])
+}
+```
+
+**Resolver types:**
+
+| Type | Kab use karo |
+|------|--------------|
+| **DynamoDB resolver** | Data directly DynamoDB table se — sabse common, fast |
+| **Lambda resolver** | Complex logic, jo bhi backend — full flexibility |
+| **HTTP resolver** | External API ya ALB pe call |
+| **RDS (SQL) resolver** | Relational data ke saath GraphQL |
+| **OpenSearch resolver** | Search data |
+
+**How it works:**
+```
+Client (React/Flutter/mobile)
+     │  query { products { id name } }
+     ↓
+AppSync (GraphQL endpoint — managed server)
+     │  Resolver (DynamoDB/Lambda)
+     ↓
+DynamoDB / Lambda / RDS / HTTP
+     │  Response (sirf requested fields)
+     ↑
+Client — normalized cache + real-time subscriptions
+```
+
+**Setup steps (console):**
+1. Console → AWS AppSync → "Create API" → "GraphQL API"
+2. **Schema paste karo** (GraphQL SDL) ya Amplify se auto-generate
+3. **Data source add karo** — DynamoDB table / Lambda function
+4. **Resolver attach karo** — console pe mapping templates (Request/Response VTL) ya Lambda
+5. **Auth mode** — API key (dev) / Cognito (users) / IAM
+6. **Test** — Console Query editor me queries chalao
+7. **Subscription enable** — client pe GraphQL client (Apollo/AWS Amplify) se connect
+
+**AppSync vs API Gateway:**
+
+| Feature | AppSync | API Gateway |
+|---------|---------|-------------|
+| API style | **GraphQL** (schema, queries) | REST/HTTP/WebSocket |
+| Real-time | ✅ Subscriptions (built-in) | WebSocket endpoints (manual) |
+| Offline sync | ✅ Built-in (Amplify) | ❌ |
+| Data access | Resolvers (DynamoDB direct) | Lambda integrations |
+| Use case | Mobile/web apps, real-time data | CRUD APIs, microservices, external |
+
+**Kab kya?**
+- **AppSync:** GraphQL chahiye, real-time data, offline mobile apps, app needs flexible query
+- **API Gateway:** REST APIs, serverless CRUD, microservices integration, team REST me comfortable
+
+**Pricing:**
+- **Query/Mutation:** ~$4 per million requests (after free tier 250k/mo)
+- **Realtime (subscriptions):** ~$1.25 per million minutes
+- Data transfer + DynamoDB/Lambda extra
+
+**Important points:**
+- **AppSync is Amplify ka backend** — `amplify add api` → AppSync + DynamoDB (GraphQL mode)
+- **Caching** — AppSync cache (TTL) — repeated queries fast + cost kam
+- **Conflict resolution** — offline sync me versions → Lambda resolver
+- **Resolvers tight karo** — authorization har field pe (Cognito groups)
+- **Schema-first** — types pehle define karo phir resolvers
+- **AppSync Events (nayi)** — high-scale pub/sub (realtime data without GraphQL mutations)
+- AppSync + Amplify/GraphQL client — mobile SDK designed (React Native, Flutter, Swift)
+
+**Analogy:** AppSync = **Buffet restaurant with recipe card** — aap chef (GraphQL schema) se kaho "mujhe sirf paneer aur salad chahiye" (query — sirf needed fields) — chef (AppSync) kitchen (DynamoDB/Lambda) se exactly wo laata hai — jo extra dish nahi (no over-fetch). Subscription = **Live kitchen cam** — dish (data) badla to aapko turant pata (real-time). API Gateway = **Fixed thali** — jo pakki list (endpoint) hai wahi milega.
+
 **CDK best practices (quick):**
 - Small focused stacks (poora infra ek stack me mat dalo)
 - `cdk diff` review hamesha — accidental changes se bacho
