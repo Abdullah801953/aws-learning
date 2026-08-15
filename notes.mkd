@@ -3596,5 +3596,122 @@ aws codebuild batch-get-builds --ids "my-app-build:xxxx"
 
 **Analogy:** CodeBuild = **Automatic kitchen (kitchen robot)** — aap recipe (source code) dete ho, kitchen (build environment) ready hai, robot steps follow karta hai (install, test, build) aur packaged dish (artifact) nikalta hai. Aapko plates (servers) nahi kharidni padti — robot rental hai. Jenkins = **Bande ka kitchen** — sirf tumhare ghar (server) me, tum khud sambhalo.
 
+## CodeDeploy
+
+CodeDeploy AWS ki **fully managed deployment** service hai — jo aapki app (built artifact) ko **EC2, Lambda, ECS, ya on-premises servers** pe **automatically deploy** karti hai — bina downtime, bina manual steps. CI/CD ka "D" — **Continuous Delivery**. Deployment strategy (blue/green, rolling) khud choose karo.
+
+**Example — Amazon ka mobile API deploy:**
+Amazon ka API 10 EC2 instances pe chalta hai:
+1. Developer code push → **CodePipeline** build (CodeBuild) → artifact ready
+2. **CodeDeploy** deploy application: 10 instances pe app version v2.1
+3. **Rolling deploy** — ek-ek karke: instance 1 update → health check ✅ → next
+4. Agar version fail hota (health check fail) → **auto-rollback** to v2.0
+5. Users ko **zero downtime** — kabhi server down nahi dikhi
+
+**CodeDeploy core concepts:**
+
+| Concept | Kya hai |
+|---------|---------|
+| **Application** | Aapki app ka name (deployment unit) |
+| **Deployment group** | Instances/targets ka group (tags, ASG, Lambda aliases) |
+| **Revision** | App ka version — artifact + appspec (S3 ya GitHub) |
+| **AppSpec file** (`appspec.yml`) | Deployment instructions (kaise install, start, verify) |
+| **Deployment** | Revision ko group pe push karne ka process |
+| **Hook** | Lifecycle event — before/after install me script chalao |
+
+**Targets (kahan deploy karta hai):**
+
+| Target | Use Case |
+|--------|----------|
+| **EC2 / on-premises** | Web servers, app servers (rolling/blue-green) |
+| **Lambda** | Serverless function version deploy (canary/linear) |
+| **ECS** | Containers (ECS service update) |
+| **ASG (Auto Scaling Group)** | Instances group pe rolling deploy |
+
+**appspec.yml example (EC2):**
+```yaml
+version: 0.0
+os: linux
+files:
+  - source: /app/
+    destination: /var/www/myapp
+hooks:
+  AfterInstall:
+    - location: scripts/restart_server.sh
+      timeout: 300
+  ApplicationStart:
+    - location: scripts/start_app.sh
+  ValidateService:
+    - location: scripts/health_check.sh
+      timeout: 60
+```
+
+**Deployment strategies:**
+
+| Strategy | Kya hota hai | Use Case |
+|----------|--------------|----------|
+| **In-place (rolling)** | Instances ek-ek karke update (same instances) | Small apps, quick |
+| **Blue/Green (EC2/ECS)** | Naye batch (green) pe deploy → traffic switch → old (blue) terminate | Zero downtime, easy rollback |
+| **Canary (Lambda)** | 10% traffic naye version pe → baaki 90% (linear) | Serverless gradual rollout |
+| **Linear** | Fixed % har 10 min (jaise 10% → 100%) | Controlled rollout |
+| **All-at-once** | Sab instances ek saath | Testing, non-prod |
+
+**Blue/Green kaise kaam karta hai:**
+```
+Blue (v2.0 — production, 10 instances)
+  ↓ DockerImage/EC2 me Green launch karo
+Green (v2.1 — nayi, 10 instances ready)
+  ↓ tests pass
+Traffic switch → Green
+  ↓ (rollback = traffic wapas Blue)
+Blue terminate (ya keep hold)
+```
+- **Zero downtime** — Green ready hone ke baad hi traffic switch
+- **Rollback easy** — bas traffic wapas Blue pe
+- Cost: extra instances (Green) — deploy time ke liye
+
+**Lambda deployment (Canary example):**
+```
+v2 warm-up → 10% traffic v2 → observe → 90% → v2.1 live
+Fail? → rollback to v1 (traffic)
+```
+
+**Setup steps:**
+
+1. **Appspec + artifact ready karo** — `appspec.yml` repo me hai, CodeBuild ya manual se artifact S3 pe
+2. **Application banao** — Console → CodeDeploy → "Create application" → Compute platform: EC2/Lambda/ECS
+3. **Deployment group banao:**
+   - EC2: tags se instances select karo (jaise `Environment:Production`)
+   - ya ASG name, role (EC2 pe install agent + S3 access)
+4. **Deployment trigger karo:**
+   - Manual: "Create deployment" → artifact S3 path → strategy
+   - **CodePipeline** se auto — pipeline ke Deploy stage me CodeDeploy action
+5. **Monitor** — Deployment details (instances, hooks), **CloudWatch** events, logs
+6. **Rollback** — automatic (fail pe) ya manual
+
+**CodeDeploy vs ECS/EKS update vs EC2 manual:**
+
+| Feature | CodeDeploy | Manual (SSH/Ansible) |
+|---------|-----------|----------------------|
+| Automation | ✅ Full | Scripts likhne padte |
+| Rollback | ✅ Auto/manual | Manual (pehle backup) |
+| Health checks | ✅ ValidateService hook | ❌ |
+| Blue/Green | ✅ Built-in | Complex scripted |
+| AWS-native | ✅ (ASG, Lambda, ECS) | ❌ |
+
+**Pricing:**
+- **Free** — CodeDeploy koi extra cost nahi (EC2/on-prem/Lambda/ECS) — sirf EC2/Lambda/ECS infra cost
+- EC2 pe CodeDeploy agent ke liye IAM role chahiye
+
+**Important points:**
+- **appspec.yml** = deployment ka map — lifecycle hooks me scripts (install, start, health-check)
+- **Health checks mandatory** — ValidateService hook — warna broken deploy bhi pass
+- **Rollback config** — deployment fail → auto rollback wali revision pe
+- **Trigger** (CloudWatch alarms/events) — deployment fail ya success pe SNS
+- CodePipeline (CI) → CodeBuild (build) → **CodeDeploy (deploy)** = full CD pipeline
+- ECS CodeDeploy = **blue/green container deploy** — zero downtime ECS update
+
+**Analogy:** CodeDeploy = **Airplane cabin crew upgrade check** — plane (server) khud nahi badalti, lekin crew (app) ka version aur process oversees. Blue/Green = **Weather-based off-summer hotel switch** — naya hotel (Green) pehle ready, guests (traffic) shift, phir purana (Blue) band. Rolling = **Traffic signal ek-ek kar ke** — kabhi full road band nahi.
+
 
 

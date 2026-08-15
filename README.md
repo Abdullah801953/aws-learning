@@ -68,6 +68,7 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 | **Config** | Resource configuration tracking & compliance rules |
 | **X-Ray** | Distributed tracing — debug requests across microservices |
 | **CodeBuild** | Managed CI/CD build & test service (part of CodeSuite) |
+| **CodeDeploy** | Automated deployments — EC2, Lambda, ECS (blue/green, rolling) |
 
 ### 🤖 AI / Machine Learning
 | Service | What it does |
