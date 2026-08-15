@@ -3389,5 +3389,100 @@ SSM Automation → auto-fix
 
 **Analogy:** AWS Config = **Quality inspector in factory** — machine (resource) ki har setting register karta hai, check karta hai "ye setting standard ke mutabik hai?" (rule). Agar machine galti se galat setting pe chali gayi (non-compliant) → inspector report karta hai + fix karvata hai (remediation). CloudTrail = **CCTV** jo baat ni karta ki machine galat hai, bas record karta hai "kisne button dabaya".
 
+## X-Ray
+
+X-Ray AWS ki **distributed tracing** service hai — jo ek request ko track karti hai jab wo **multiple services** se hoti hui jaati hai (API Gateway → Lambda → DynamoDB → SNS). Isse pata chalta hai: **request kahan atki, kaunsa service slow tha, error kahan aaya** — microservices architecture ki debugging ke liye.
+
+**Example — "Mera order API 10 second me response kyun de raha hai?"**
+Amazon ka order API 5 services se banta hai:
+1. User request → **API Gateway** → **Lambda (validate)** → **DynamoDB (save)** → **SNS (notify)** → response
+2. Request slow hai — kaunsa step?
+3. **X-Ray** se trace dekho:
+   - Lambda validate: 200ms ✅
+   - **DynamoDB: 9.2 seconds** ❌ (slow query/slow done)
+4. Turant pata chal gaya — DynamoDB slow query fix karo, baaki sab fast hai
+
+**X-Ray core concepts:**
+
+| Concept | Kya hai |
+|---------|---------|
+| **Trace** | Ek request ka pura journey (multiple segments) |
+| **Segment** | Ek service ka part (jaise Lambda call) |
+| **Subsegment** | Service ke andar ka call (DynamoDB, HTTP, DB query) |
+| **Service map** | Visual graph — services + latency + errors |
+| **Annotations** | Custom key-value (trace pe search karne ke liye) |
+| **Sampling** | Har request ni — kuch % sample hoti hain (cost) |
+
+**Trace kaise dikhta hai (simplified):**
+```
+Client → API Gateway (50ms) → Lambda validate (200ms) → DynamoDB (9.2s) ❌
+                                        ↓
+                                      SNS (30ms) — never reached? NO — slow pe
+```
+**Service Map** — visual:
+```
+API Gateway ──→ Lambda validate ──→ DynamoDB
+     │                │
+     │                └──→ SNS
+     └── (User)
+```
+- Green/red circles — error/slow indicator
+- Latency sab line pe dikhta hai
+
+**Kaise instrument karta hai (SDK):**
+
+| Language | SDK |
+|----------|-----|
+| Python | `aws-xray-sdk` |
+| Node.js | `aws-xray-sdk-node` |
+| Java / Go | AWS X-Ray SDK |
+| Lambda | **Auto-instrumented** (handler ke andar) — SDK optional |
+| API Gateway | Auto — trace headers pass |
+
+**Setup steps:**
+
+1. **X-Ray enable karo** (per service):
+   - **Lambda:** X-Ray tracing ON (console/CLI) — `TracingConfig: Active`
+   - **EC2/ECS:** X-Ray daemon install karo + SDK (agent)
+2. **IAM permissions** — `AWSXRayDaemonWriteAccess` role/daemon pe
+3. **SDK add karo** — app code me (capture call, annotation)
+   ```python
+   # Python example
+   from aws_xray_sdk.core import xray_recorder
+   xray_recorder.begin_subsegment("dynamodb_query")
+   response = table.query(...)
+   xray_recorder.end_subsegment()
+   ```
+   Ya Lambda/API Gateway ka **native integration** (auto)
+4. **Console pe dekho** — X-Ray → Service map / Traces / Analytics
+5. **Trace search** — annotations se filter ("order_id = 12345" ke liye)
+
+**X-Ray vs CloudWatch:**
+
+| Feature | X-Ray | CloudWatch |
+|---------|-------|-----------|
+| Type | **Distributed tracing** | Metrics & logs monitoring |
+| Track | Request journey (service-to-service) | Resource health (metrics) |
+| Sees | Latency/error **per call chain** | CPU, memory aggregate |
+| Best for | Microservices — "request kahan atki" | Infrastructure — "server healthy?" |
+| Visual | Service map/graph | Dashboards |
+
+**Use cases:**
+- **Slow requests debug** — kaunsa service bottleneck hai
+- **Error tracing** — Lambda me error kahan hua
+- **Dependency analysis** — koi service dusri pe kitna depend hai
+- **Performance baselines** — latency tracking over time
+- **Cost attribution** — trace pe annotations se (order_id, customer tier)
+
+**Important points:**
+- **Sampling ON** — 100% requests trace nahi hoti (default ~1%) — cost control
+- **Cost:** per trace ($0.0000005/trace ≈ 1M ~$0.50 — approx) + storage
+- **Segment limits:** 500 segments/trace — deep chains bhi covered
+- **Lambda native** — bina SDK ke bhi basic traces
+- X-Ray + CloudWatch = **complete observability** (metrics + logs + traces)
+- **OpenTelemetry** — X-Ray OTLP endpoint support (modern SDK option)
+
+**Analogy:** X-Ray = **Tracker app for your request** — delivery (request) ka live status: "kahan hai, kitna aage badha, kis stop pe atka". Service map = **Delivery route map** — saare stops (services) + har stop ka time. CloudWatch = **Weather radar** — infrastructure health watch karta hai, but request ka detailed journey X-Ray ka kaam hai.
+
 
 

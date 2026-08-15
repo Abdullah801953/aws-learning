@@ -66,6 +66,7 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 | **CloudWatch** | Monitoring & observability — metrics, alarms, logs, dashboards |
 | **CloudTrail** | Audit logging — records every API call for security & compliance |
 | **Config** | Resource configuration tracking & compliance rules |
+| **X-Ray** | Distributed tracing — debug requests across microservices |
 
 ### 🤖 AI / Machine Learning
 | Service | What it does |
