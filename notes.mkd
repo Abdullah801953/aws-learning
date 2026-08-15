@@ -3958,5 +3958,131 @@ aws cloudformation delete-stack --stack-name my-app-stack
 
 **Analogy:** CloudFormation = **Blueprint for building house** — architect (developer) ek drawing (template) banata hai, contractor (CloudFormation) uske mutabik poora house (stack) banata hai — har kamra (resource) sahi jagah, sahi order me. Agar koi kamra galat bana (fail) → poora kaam wahi ruk jaata hai (rollback). Naya makaan (staging) — wahi blueprint — 1 minute. Terraform = dusra contractor jo kisi bhi city me ghar bana sakta hai (multi-cloud), Blueprint yahi rahega.
 
+## CDK (Cloud Development Kit)
+
+CDK AWS ka **Infrastructure as Code (IaC) framework** — jisme aap infra ko **programming languages** me likhte ho (TypeScript, Python, Java, Go, C#, JavaScript) — YAML khud nahi likhna padta. CDK code ko compile karke **CloudFormation template** banata hai — phir wahi CloudFormation infra deploy karta hai. **Infra = code — real programming power.**
+
+**Example — Amazon ka Lambda + API Gateway infra (Python):**
+```python
+from aws_cdk import (
+    aws_lambda as lambda_,
+    aws_apigateway as apigateway,
+    Stack, App, Duration,
+)
+
+class MyApiStack(Stack):
+    def __init__(self, scope, id, **kwargs):
+        super().__init__(scope, id, **kwargs)
+
+        # 1. Lambda function
+        fn = lambda_.Function(
+            self, "MyHandler",
+            runtime=lambda_.Runtime.PYTHON_3_12,
+            handler="handler.main",
+            code=lambda_.Code.from_asset("lambda/"),
+            timeout=Duration.seconds(30),
+        )
+
+        # 2. API Gateway — Lambda se connected
+        apigateway.LambdaRestApi(
+            self, "MyApi",
+            handler=fn,
+            proxy=False,
+        )
+
+# Deploy:
+app = App()
+MyApiStack(app, "MyApiStack")
+app.synth()   # → CloudFormation template generate
+```
+
+**CDK kaise kaam karta hai?**
+
+```
+CDK code (Python/TS) → `cdk synth` → CloudFormation template (auto-generated)
+                                        ↓
+                            `cdk deploy` → Stacks live (AWS)
+```
+
+- **Constructs** — reusable building blocks (resources ya component groups)
+- **L3 Constructs** — high-level: ek line me poora pattern (ALB + ASG, S3 + CloudFront)
+- **L1 Constructs** — CloudFormation resources ka 1:1 mapping (`CfnBucket`)
+- **CDK best practice** — **L3 constructs** use karo (patterns, sane defaults)
+
+**CDK vs CloudFormation vs Terraform:**
+
+| Feature | CDK | CloudFormation | Terraform |
+|---------|-----|----------------|-----------|
+| Language | **Python/TS/Java/Go/C#** | YAML/JSON | HCL |
+| Programming power | ✅ loops, if, classes, functions | ❌ (template only) | ❌ (limitada) |
+| Logic reuse | ✅ NPM/Maven/PyPI packages | Nested stacks | Modules |
+| AWS support | ✅ Deepest quickly | ✅ | Good |
+| Multi-cloud | ❌ | ❌ | ✅ |
+| Deployment engine | CloudFormation | itself | itself |
+| Best for | **Developers**, complex logic infra | Simple/team YAML-dosti | Multi-cloud teams |
+
+**CDK key features:**
+- **Real programming** — loops se 10 buckets, if-condition se resources, functions se reuse
+- **Type safety** — errors compile time pe pata chalte hain (YAML me runtime pe)
+- **Construct library** — 5000+ pre-built components (registry)
+- **`cdk watch`** — file change pe auto-deploy (dev loop)
+- **`cdk destroy`** — poora stack cleanup
+- **Diff command** — `cdk diff` — deploy se pehle kya badlega
+- **App/Stack/Stage** — multi-stack, multi-env (dev/prod) ek app me
+- **Context** — env-specific values (parameter store jaise)
+
+**Setup steps:**
+
+1. **CDK install karo:**
+   ```bash
+   npm install -g aws-cdk
+   cdk --version
+   ```
+2. **App init karo:**
+   ```bash
+   mkdir my-infra && cd my-infra
+   cdk init app --language python
+   # (Ya: --language typescript/java/go/csharp)
+   ```
+3. **Code likho** — `app.py` (ya main.ts) me constructs
+4. **`cdk synth`** — CloudFormation template generate karo (check)
+   ```bash
+   cdk synth   # template.json banta hai
+   ```
+5. **`cdk deploy`** — stack deploy
+   ```bash
+   cdk deploy MyApiStack
+   ```
+6. **`cdk diff` / `cdk destroy`** — update preview / cleanup
+
+**CDK commands:**
+```bash
+cdk list          # stacks list
+cdk synth         # template generate (kuch nahi deploy)
+cdk diff          # changes preview (deploy se pehle)
+cdk deploy        # deploy stack
+cdk deploy --all  # saare stacks
+cdk destroy       # stack delete
+cdk watch         # auto-deploy on change (dev)
+```
+
+**Important points:**
+- **CDK internally CloudFormation** use karta hai — template auto-generated — so CloudFormation features (rollback, change sets) sab available
+- **Bootstrap needed** — pehli baar `cdk bootstrap` (S3 bucket for assets) — deploy se pehle 1 baar
+- **L3 constructs** — sane defaults, less code (Best practice)
+- **Package ecosystem** — publish own constructs (npm/PyPI) — team me share
+- **CDK + CodePipeline** — infra CI/CD: code push → cdk deploy (cross-account)
+- **Snippets/types** — IDE support (VS Code: AWS Toolkit)
+- **Versioning** — CDK version + CloudFormation template lock
+- **Cost** — CDK free (CloudFormation free) — sirf resources ka bill
+
+**Analogy:** CloudFormation = **Architect's hand-drawn blueprint (YAML)** — sahi hai but har baar haath se drawing. CDK = **Architecture software (AutoCAD-like)** — aap code/buttons (programming) se design karte ho, wo khud blueprint (CloudFormation) print kar deta hai. Loops = ek click me 10 floors (buckets) banjana. Developer ke liye — code likhna aata hai, YAML nahi — **CDK = infra in Python/TS.**
+
+**CDK best practices (quick):**
+- Small focused stacks (poora infra ek stack me mat dalo)
+- `cdk diff` review hamesha — accidental changes se bacho
+- Snapshot testing (cdk assertions) — infra tests likho
+- Tags lagao — cost tracking
+
 
 
