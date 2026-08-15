@@ -76,6 +76,7 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 | **AppSync** | Managed GraphQL API — real-time subscriptions, offline sync |
 | **WorkSpaces** | Managed virtual desktops (VDI) — Windows/Linux cloud desktops |
 | **Amazon Q** | AI assistant — Q Developer (coding) & Q Business (enterprise Q&A) |
+| **MCP for AWS** | AI assistants connect to AWS tools/docs via Model Context Protocol |
 
 ### 🤖 AI / Machine Learning
 | Service | What it does |

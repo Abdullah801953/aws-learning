@@ -4454,6 +4454,96 @@ Amazon Q AWS ki **generative AI assistant** hai — jo developers, IT aur busine
 
 **Analogy:** Amazon Q = **AWS-specialized copilot** — aapke IDE ke andar expert jo AWS ke 200+ services jaanta hai aur aapka code bhi padh sakta hai. ChatGPT = **General encyclopedia** — sab kuch pata hai thoda-thoda. Q Business = **Company HR+helpdesk combined** — jo sirf authorized company docs ke mutabik jawab deta hai — data safe.
 
+## MCP (Model Context Protocol) for AWS
+
+MCP ek **open standard (Anthropic ka)** hai jo **AI assistants (LLMs) ko tools aur data se connect** karta hai — ek standardized tarike se. **"AI ka USB-C port"** — jaise ek port se sab devices connect, waise MCP se koi bhi AI assistant kisi bhi tool/data source se connect. **AWS ke official MCP servers (awslabs/mcp)** AI coding assistants ko AWS documentation, APIs, pricing, aur service-specific context dete hain — taake AI assistant AWS ko sahi tarike se use kare, live data ke saath.
+
+**MCP architecture:**
+```
+AI Assistant (Claude, Cursor, VS Code, Amazon Q, opencode)
+     │  MCP Client
+     ↓  (standardized protocol)
+MCP Server (AWS Documentation / API / Pricing...)
+     ├── Tools (functions AI call kar sakta hai)
+     ├── Resources (data/files)
+     └── Prompts (templates)
+             ↓
+          AWS APIs / Docs / Services
+```
+
+**MCP core concepts:**
+
+| Concept | Kya hai |
+|---------|---------|
+| **MCP Server** | Lightweight program jo tools expose karta hai (e.g., "AWS docs search") |
+| **MCP Client** | AI assistant ka hissa — server se 1:1 connect |
+| **Tools** | Functions AI call kar sakta hai (jaise `read_documentation`) |
+| **Transport** | Stdio (local CLI) ya Streamable HTTP (remote) |
+| **Host** | ChatGPT/Claude Desktop/IDE/code agent jahan AI chalta hai |
+
+**AWS ke official MCP servers (awslabs/mcp):**
+
+| Server | Kya tools deta hai |
+|--------|--------------------|
+| **aws-documentation-mcp-server** | AWS docs read/search — pages Markdown me convert, sections, tables, recommendations |
+| **aws-api-mcp-server** | AWS CLI commands over AWS APIs — AI se AWS manage/query (⚠️ powerful — security dhyan) |
+| **aws-cost-analysis-mcp-server** | AWS Pricing + Cost Explorer — pricing queries ("EC2 m5.large kitna us-east-1 me") |
+| **aws-bedrock-mcp-server** | Bedrock FMs — invoke models, list models, context |
+| **aws-serverless-mcp-server** | Lambda/Fargate guidance — deploy, best practices |
+| **aws-ecs-mcp-server** | ECS — clusters/containers guidance, deployments |
+| **aws-eks-mcp-server** | EKS — Kubernetes clusters, kubectl workflows |
+| **aws-neptune-mcp-server** | Neptune databases — Gremlin/SPARQL queries |
+| ... (list badhti jaati hai) | |
+
+**Installation example (VS Code + Documentation MCP server):**
+```bash
+# pip se install karo
+pip install awslabs.aws-documentation-mcp-server
+# Server chalao (stdio transport):
+aws-documentation-mcp-server
+```
+VS Code me (`mcp.json`):
+```json
+{
+  "servers": {
+    "aws-docs": {
+      "type": "stdio",
+      "command": "aws-documentation-mcp-server"
+    }
+  }
+}
+```
+Ya Cursor/Claude Desktop settings me add karo.
+
+**Amazon Q Developer + MCP:**
+- Amazon Q Developer ne **MCP client support** add kiya hai — external MCP servers se connect kar sakta hai (repo scope me config)
+- Q kisi custom MCP server (apne internal tools) se bhi connect — enterprise workflows
+
+**MCP use cases:**
+- **Vibe coding** — AI assistant AWS resources banae (recommended guidance with MCP servers)
+- **AWS docs assistant** — "S3 lifecycle policy kaise likhe?" → server exact docs se accurate answer
+- **Cost optimization AI** — pricing queries live data se
+- **Infra management AI** — API server se resources inspect/manage (careful — production me IAM scoped roles)
+
+**MCP vs API (LLM function calling):**
+
+| Feature | MCP | Direct APIs |
+|---------|-----|-------------|
+| Standard | ✅ Open standard (universal) | ❌ Har vendor alag |
+| Integration | One-time config — koi bhi client | Har client pe custom code |
+| Tools/context | Tools + resources + prompts ek framework | Sirf API calls |
+| Ecosystem | Growing — AWS, GitHub, Slack... | Manual |
+
+**Important points:**
+- **Security — sabse zaroori:** MCP tools AI ko real actions karwa sakte hain (API server) — **prompt injection risks** — untrusted data se careful
+- **Least privilege IAM** — API MCP server ko sirf required permissions
+- AWS MCP servers **open source** (Apache-2.0) — self-host kar sakte ho
+- Docs server **read-only** (safe) — API server **read-write** (powerful but risky)
+- Local (stdio) vs Remote (HTTP) — remote production ke liye auth chahiye
+- Bedrock Agents / Event MCP — AWS services pe MCP ecosystem expand
+
+**Analogy:** MCP = **USB-C port for AI** — pehle har device (tool) ka apna charger (API) hota tha; ab ek standard port — koi bhi AI assistant (phone) kisi bhi device (AWS services/docs/tools) ko plug-in karke use kar sakta hai. AWS MCP servers = **USB-C adapters for AWS** — AWS ka poora ecosystem AI assistants ke liye plug-and-play.
+
 **CDK best practices (quick):**
 - Small focused stacks (poora infra ek stack me mat dalo)
 - `cdk diff` review hamesha — accidental changes se bacho
