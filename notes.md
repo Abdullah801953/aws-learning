@@ -4785,6 +4785,116 @@ aws sts get-caller-identity  # check
 
 **Analogy:** Identity Center = **Company main gate with master badge** — ek baar badge (login) se saari buildings (accounts) ke saare allowed rooms (permission sets) khulte hain. IAM users = har building ka alag alag guard/lock. Permission set = "Master key for Building A, Visitor pass for B". Portal = **Company directory** — jahan sab buildings ka list + ek click me entry.
 
+## VPC (Virtual Private Cloud) — Networking
+
+VPC AWS ka **cloud networking** service — jisme aap apna **private virtual network** banate ho (jaise apne on-prem data center me network) — with **IP ranges, subnets, route tables, gateways, firewalls**. India me analogy: aapka **own gated community** — andar apni buildings (subnets), streets (route tables), security (security groups/NACLs), aur bahar ka connection (internet gateway).
+
+**Example — Amazon ka web app network:**
+Amazon ka app 3-tier structure me chalta hai:
+```
+VPC (10.0.0.0/16)
+├── Public Subnet (10.0.1.0/24) — Internet Gateway
+│   └── ALB / Web servers (internet se accessible)
+├── Private Subnet (10.0.2.0/24) — no direct internet
+│   └── App servers (EC2)
+└── Private Subnet (10.0.3.0/24) — DB zero internet
+    └── RDS database (sirf app se)
+```
+1. Users internet se aate hain → **Internet Gateway (IGW)** → **Public subnet** (ALB) 
+2. ALB traffic **app servers** ko bhejta hai (private subnet)
+3. App servers **RDS** se data lete hain (database subnet — internet se completely hidden)
+4. **NAT Gateway** — private subnet apps ko outbound internet deta hai (packages/downloads) bina inbound ke
+
+**VPC core components:**
+
+| Component | Kya hai |
+|-----------|---------|
+| **VPC** | Aapka private network (IP CIDR: `10.0.0.0/16`) |
+| **Subnet** | VPC ka hissa — ek AZ me (public/private) |
+| **Route table** | Traffic kahan jayega (0.0.0.0/0 → IGW / NAT / local) |
+| **Internet Gateway (IGW)** | VPC ↔ internet ka bridge (public access) |
+| **NAT Gateway/Instance** | Private subnet ka outbound internet (no inbound) |
+| **Security Group (SG)** | **Instance-level firewall** (stateful) — allow-only rules |
+| **Network ACL (NACL)** | **Subnet-level firewall** (stateless) — allow/deny rules |
+| **VPC Peering** | Do VPCs ek-dusre se connect (same/other account) |
+| **VPN / Direct Connect** | On-prem → AWS private connection |
+| **VPC Endpoint** | AWS services (S3/DynamoDB) ko internet ke bina access |
+| **Gateway LB / Transit Gateway** | Large scale networking (hub for many VPCs) |
+
+**CIDR & IP basics:**
+- **CIDR notation:** `10.0.0.0/16` = 65,536 IPs; `/24` = 256 IPs; `/28` = 16 IPs
+- AWS VPC: max `/16`, min `/28`
+- Har subnet me **5 IPs reserved** (network, gateway, DNS, future use) — 10.0.1.0/24 se 251 usable
+- **AZs (Availability Zones)** — subnets alag AZ me daalo (11 regions me 3+ AZs) — high availability
+
+**Public vs Private subnet:**
+| Feature | Public Subnet | Private Subnet |
+|---------|---------------|----------------|
+| Internet access (inbound) | ✅ IGW se | ❌ (no route to IGW) |
+| Outbound | ✅ IGW | ✅ NAT se (ya direct) |
+| Resources | ALB, web, bastion host | DB, app servers, backend |
+| Security | Less (exposed) | More (hidden) |
+
+**Route table example:**
+```
+Destination       Target
+10.0.0.0/16       local          (VPC ke andar)
+0.0.0.0/0         igw-xxxx       (public subnet — internet se)
+0.0.0.0/0         nat-xxxx       (private subnet — NAT se outbound)
+10.0.5.0/24       pcx-xxxx       (peering — doosra VPC)
+```
+
+**Security Group vs NACL:**
+
+| Feature | Security Group | Network ACL |
+|---------|---------------|-------------|
+| Level | **Instance** level | **Subnet** level |
+| Stateful/Stateless | ✅ Stateful (return auto-allow) | ❌ Stateless (in+out dono rules) |
+| Rules | Sirf **Allow** | Allow **+ Deny** |
+| Default | Deny all (empty) | Allow all |
+| Order | No order (all apply) | Rule numbers (1-32766, lowest first) |
+| Analogy | Building ka room guard | **Society gate guard** (pehle check — phir room) |
+
+**Setup steps — 3-tier VPC (console):**
+1. **VPC banao** — Console → VPC → "Create VPC" — name + CIDR (`10.0.0.0/16`) — IPv4 only (ya IPv6 extra)
+2. **Subnets banao** — 3-4 subnets:
+   - Public: 10.0.1.0/24 (us-east-1a), 10.0.2.0/24 (us-east-1b)
+   - Private app: 10.0.3.0/24 (a), 10.0.4.0/24 (b)
+   - Private DB: 10.0.5.0/24 (a), 10.0.6.0/24 (b)
+3. **IGW** — create → VPC se attach
+4. **Route tables** — public RT: `0.0.0.0/0 → IGW` (public subnets attach), private RT: `0.0.0.0/0 → NAT`
+5. **NAT Gateway** — public subnet me (EIP ke saath) → private RT me route
+6. **Security Groups**:
+   - ALB SG: 0.0.0.0/0 : 80/443
+   - App SG: ALB SG se : 80 (source = SG — secure!)
+   - DB SG: App SG se : 3306/5432
+7. **Test** — EC2 launch: public me IGW + private me NAT se internet check
+
+**VPC Peering:**
+```
+VPC A (10.0.0.0/16) ⇄ pcx-xxx ⇄ VPC B (10.0.5.0/16)
+```
+- Same/different account/region — private IP communication (fast, no internet)
+- **No transitive peering** — A↔B, B↔C se A↔C nahi (Transit Gateway chahiye)
+
+**VPC Endpoint (private AWS access):**
+- **Gateway endpoint** — S3/DynamoDB (free, route-level)
+- **Interface endpoint** — baaki services (private ENI in VPC)
+- Internet ke bina S3/DynamoDB access — security + no data egress cost
+
+**Important points:**
+- **Default VPC** — har account me pre-made (ok for learning, aur production me custom banao)
+- **Flow Logs** — VPC network traffic logs (CloudWatch) — security monitoring
+- **Multi-AZ** hamesha — 2 AZs minimum (HA)
+- **Route propagation** — VPN/DX se auto routes
+- **IPv6** support — dual-stack subnets
+- **VPC pe 5 IPs reserved** — subnet design me dhyan rakhna
+- **Kaam ke standard patterns** — public/private/database subnets (3-tier) — well-architected default
+
+**Pricing:** VPC **free** — sirf NAT Gateway (~$0.045/hr) + data transfer (outbound) + VPC endpoints (hourly) ka cost. IGW, subnets, route tables, SG, VPC free.
+
+**Analogy:** VPC = **Gated community** — poora society (VPC) ka ek fence (CIDR), andar blocks (subnets), roads (route tables), gate (IGW), guards (SG/NACL). Public block = **Front shops** (maine road pe — sabko accessible). Private block = **Ghar** — andar ka traffic sirf guards (SG) se allowed. NAT = **Security kiosk** — residents (private) bahar jaa sakte hain lekin outsiders andar nahi. Peering = **Two societies ka private shortcut road**. Endpoint = **Society ki internal post office** — bahar ki post (internet) ke bina items (S3) deliver.
+
 **CDK best practices (quick):**
 - Small focused stacks (poora infra ek stack me mat dalo)
 - `cdk diff` review hamesha — accidental changes se bacho

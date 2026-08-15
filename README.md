@@ -16,6 +16,7 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 | **Route 53** | DNS service — domain registration, routing (A, CNAME, MX, NS records), health checks |
 | **CloudFront** | CDN — serves content from 600+ edge locations worldwide with caching, SSL, DDoS protection |
 | **ELB (Load Balancer)** | Distributes traffic across servers — ALB (L7), NLB (L4), GWLB (IP) |
+| **VPC** | Virtual private cloud — subnets, route tables, IGW/NAT, SG/NACL |
 
 ### 🛡️ Security, Identity & Compliance
 | Service | What it does |
