@@ -2,7 +2,7 @@
 
 A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's leading cloud computing platform offering 200+ pay-as-you-go services across compute, storage, databases, networking, AI/ML, and more.
 
-> **Note:** Detailed, step-by-step notes with real-world examples (Amazon-style use cases), setup guides, CLI commands, pricing comparisons, and analogies are available in [`notes.mkd`](./notes.mkd).
+> **Note:** Detailed, step-by-step notes with real-world examples (Amazon-style use cases), setup guides, CLI commands, pricing comparisons, and analogies are available in [`notes.md`](./notes.md).
 
 ![AWS Screenshot](aws-screenshot.png)
 
@@ -132,7 +132,7 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 ```
 .
 ├── README.md      # Overview of the AWS learning journey
-└── notes.mkd      # Detailed, topic-wise study notes (2,200+ lines)
+└── notes.md       # Detailed, topic-wise study notes (2,500+ lines)
 ```
 
 ---
