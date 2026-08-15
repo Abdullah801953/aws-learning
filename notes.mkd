@@ -2687,5 +2687,173 @@ SELECT * FROM orders;                                   -- ❌ full scan, zyada 
 
 **Analogy:** Athena = **Google search for your S3 data** — Google ka server kharidne ki zaroorat nahi, bina software ke. Bas search (SQL) likho, results milengaye. Jaise search engine poori web ko scan karta hai, waise Athena S3 ko — sirf wo pages scan karta hai jo query se match hote hain (partitioning + Parquet).
 
+## Glue (AWS Glue)
+
+Glue AWS ki **serverless ETL (Extract, Transform, Load)** service hai. Ye S3/databases se data **extract** karta hai, **transform** (clean, join, aggregate) karta hai, aur processed data wapas S3 ya kisi target me **load** karta hai. Ye **Apache Spark** based hai — Glue server manage karta hai, aap sirf job likhte ho.
+
+**Example — Amazon ka customer data pipeline:**
+Amazon ko 5 alag sources (MySQL orders, MongoDB users, S3 logs) ka data ek jagah chahiye:
+1. **Glue Crawler** har source scan karta hai → **Data Catalog** me tables banata hai
+2. **Glue ETL job** (Python/PySpark) likha jata hai: 5 sources → join → clean (nulls remove, format fix) → Parquet
+3. Job schedule karo (har raat 2 baje) ya event pe trigger (S3 me file aayi)
+4. **Glue Studio** me drag-drop ya code se job banao
+5. Clean data S3 processed zone me jaata hai → Athena/QuickSight ready
+
+**Glue ka pura ecosystem (4 parts):**
+
+| Part | Kya karta hai | Kya use hota hai |
+|------|---------------|------------------|
+| **Data Catalog** | Metadata store — tables, schemas, partitions | Athena, Redshift Spectrum, EMR sab isi se tables lete hain |
+| **Crawler** | Data source scan karta hai, schema detect karta hai, tables banata hai | Naya data aane par table auto-create |
+| **ETL Jobs** | Serverless Spark jobs — transform+load | Main work: clean, join, aggregate, convert formats |
+| **Triggers & Workflows** | Jobs schedule/coordinated chalana | Daily pipelines, dependency chains |
+
+**Glue Crawler + Data Catalog example:**
+```
+S3: s3://data-lake/raw/orders/year=2026/month=8/
+        ↓ (Glue Crawler scan)
+Glue Data Catalog: table "orders" (columns: order_id, amount, city) + 2 partitions
+        ↓
+Athena / Redshift Spectrum / EMR — isi table ko query karte hain
+```
+
+**ETL Job example (PySpark):**
+```python
+import sys
+from awsglue.transforms import *
+from awsglue.context import GlueContext
+from pyspark.context import SparkContext
+
+sc = SparkContext()
+glueContext = GlueContext(sc)
+
+# 1. Extract — Data Catalog se table padho
+orders = glueContext.create_dynamic_frame.from_catalog(
+    database="analytics", table_name="orders_raw")
+
+# 2. Transform — clean & filter
+clean = orders.filter(lambda row: row["amount"] is not None) \
+              .drop_fields(["temp_col"])
+
+# 3. Load — Parquet me S3 processed zone
+glueContext.write_dynamic_frame.from_options(
+    frame=clean, connection_type="s3",
+    connection_options={"path": "s3://data-lake/processed/orders/"},
+    format="parquet")
+```
+
+**Glue vs EMR vs Athena — kab kya use karein?**
+
+| Feature | Glue | EMR | Athena |
+|---------|------|-----|--------|
+| Type | **Serverless ETL** | Managed Spark clusters | Serverless SQL |
+| Code likhoge | PySpark jobs | PySpark, Scala, Java, Hive | SQL only |
+| Best for | Repeatable ETL pipelines, Crawlers | Complex ML, heavy custom processing | Quick ad-hoc queries |
+| Setup | Serverless — job likho, chal gaye | Cluster launch (~min) | Kuch nahi (table checked hota hai) |
+| Cost | Per job execution (DPU-hours) | Per node per sec + premium | Per TB scanned |
+| Extra | Data Catalog + Crawlers included | Full control, notebooks | Best with Glue Catalog tables |
+
+**Glue ETL cost:** **DPU (Data Processing Unit)** me count hota hai — 1 DPU = 4 vCPU + 16GB RAM. ~$0.44/DPU-hour. Job performance pe cost base hota hai.
+
+**Glue alternatives:** 
+- **EMR** = aap khud cluster chalao, full control
+- **Spark on EKS/Fargate** = containerize karo job
+- Glue best jab: serverless simplicity + Data Catalog ek jagah chahiye
+
+**Setup steps (Crawler + Job):**
+1. Console → AWS Glue → **Crawlers** → Create → S3 path (source) → role → run
+2. Data Catalog me table check karo
+3. **Jobs** → Create → Visual (Glue Studio) ya Python (Spark)
+   - Job type: Spark, language: Python
+   - IAM role: S3 read/write + catalog access
+4. **Schedule** — Trigger (cron) ya event (S3) se job chalao
+5. Job run → S3 processed zone → verify Athena pe
+
+**Analogy:** Glue = **Data factory workers** — kaam pe aate hain kabhi khud nahi. Andaaz: Data Catalog = **chhati (shelf list)** jahan har cheez ka location likha hai. Crawler = **Scanner** jo naya saman chhati pe register karta hai. ETL Job = **Factory workers** jo saman ko clean-pack karke ready kar dete hain.
+
+## Redshift
+
+Redshift AWS ka **petabyte-scale data warehouse** hai — **columnar storage** + **massive parallel processing (MPP)** se SQL analytics **bohot fast** chalata hai. Ye **BI queries / dashboards** ke liye hai — jahan Athena/EMR se baar baar query karna slow ho.
+
+**Example — Amazon ki BI dashboard:**
+Amazon ki sales team ko live dashboard chahiye — roz 2GB data update hota hai, 500 employees query karte hain:
+1. Data S3 se **COPY** karke Redshift me load hota hai (daily)
+2. Queries (SELECT, GROUP BY, JOINs) **parallel** 100s cores pe chalti hain
+3. Dashboard **sub-second** response deta hai — Athena yahan slow badega (har baar scan)
+4. **Concurrency Scaling** — 500 log ek saath aaye to extra clusters auto-launch
+
+**Redshift architecture:**
+```
+Redshift Cluster
+├── Leader Node — query plan + distribute to compute nodes
+├── Compute Nodes (2-100s)
+│   └── Slices (per node) — data partitioned + parallel queries
+└── Columnar Storage (RA3 / DC2) — compressed, fast scans
+        ↓
+    S3 (COPY/UNLOAD) — data lake integration
+```
+
+**Key features:**
+- **Columnar storage** — sirf needed columns read hoti hain, compression zyada (CSV se 75%+ chhota)
+- **MPP (Massive Parallel Processing)** — query har node/slice pe parts me chalti hai → fast
+- **Redshift Spectrum** — S3 pe bhi SQL query (bina load kiye) — Redshift + S3 dono milakar
+- **Serverless (option)** — cluster khud manage nahi karna, pay per query (2023+)
+- **AWS integrations** — S3 COPY/UNLOAD, Glue, DMS (data migration), QuickSight BI
+- **Auto scaling** — compute nodes add/remove load ke hisaab se
+
+**Redshift vs Athena — kab kya:**
+
+| Feature | Redshift | Athena |
+|---------|----------|--------|
+| Type | Data warehouse (cluster) | Serverless query engine |
+| Best for | **Repeated BI queries, dashboards** | Ad-hoc, occasional queries |
+| Data location | Loaded (columns in cluster) | S3 pe hi |
+| Query speed | **Sub-second** (prepared) | Seconds-minutes (scan) |
+| Setup | Cluster provision + load data | None (table checked hota hai) |
+| Cost | Cluster 24x7 (ya serverless per query) | Per TB scanned |
+| Concurrency | High (100s queries) | Limited (workgroup me) |
+| When | Corporate BI, Tableau/QuickSight, slow Athena bardaste nahi | Exploration, event-driven SQL |
+
+**Setup steps:**
+1. Console → Redshift → **Create cluster** (provisioned ya serverless)
+   - Node type (RA3.xlarge), node count, admin password, VPC
+2. **Data load:**
+   ```sql
+   COPY orders FROM 's3://data-lake/raw/orders/' 
+   IAM_ROLE 'arn:aws:iam::123456789012:role/redshift-s3'
+   FORMAT AS PARQUET;
+   ```
+   Ya **DMS** / **Glue** se continuous load
+3. **Query chalao:**
+   ```sql
+   SELECT city, SUM(amount) FROM orders 
+   WHERE year = 2026 GROUP BY city ORDER BY 2 DESC;
+   ```
+4. **QuickSight / Tableau** se connect karo → dashboards
+5. **Spectrum** — S3 data bhi query karo (same Redshift):
+   ```sql
+   SELECT * FROM spectrum.orders_parquet WHERE month = 8;
+   ```
+
+**Redshift Spectrum vs Athena:**
+- Both query S3 pe — Spectrum Redshift cluster se (fast, consistent)
+- Athena behtar jab Redshift jitna cost justify nahi hota (kam queries)
+
+**Cost:**
+- **Provisioned:** On-demand per node ($0.25/hr - $0.90/hr approx, RA3) — cluster 24x7
+- **Serverless:** Pay per query (RPU-hours) — no idle cost
+- Reserved nodes = ~25-40% save (1-3 yr commit)
+- **Snapshot + pause** — idle time pe cluster pause karo, cost 0
+
+**Best practices:**
+- **Sort key + Dist key** — table design se query fast: sort = WHERE filter column, dist = JOIN column
+- **VACUUM + ANALYZE** — tombstones clean karo, stats update
+- **Data compression** — columnar auto = kam disk
+- **Load batching** — har row COPY mat karo, batch load karo (CTAS/COPY)
+- **Spectrum** — rarely accessed data S3 pe rakho (sasta), hot data Redshift pe
+- **Pause/resume** — night pe cluster pause — 30-40% cost save
+
+**Analogy:** Redshift = **Supermarket with organized aisles** — ek baar saman shelves pe sajja diya (columnar + sort keys), customer ko har baar warehouse se dhundna nahi padta. Wahan se dhundna = Athena (S3, har baar scan). Shelf pe sajja hua saman = sub-second query. Redshift Spectrum = Shelf aur warehouse dono ka mix.
+
 
 

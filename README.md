@@ -59,6 +59,8 @@ A comprehensive, hands-on study of **Amazon Web Services (AWS)** — the world's
 | **MemoryDB** | Durable, Redis-compatible in-memory database |
 | **EMR** | Managed big data processing — Hadoop/Spark clusters on EC2 |
 | **Athena** | Serverless SQL queries directly on S3 data — pay per query |
+| **Glue** | Serverless ETL — crawlers, Data Catalog, PySpark jobs |
+| **Redshift** | Petabyte-scale data warehouse — fast columnar SQL analytics |
 
 ### 🤖 AI / Machine Learning
 | Service | What it does |
