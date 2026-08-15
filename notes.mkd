@@ -214,7 +214,7 @@ aws s3 cp s3://werdfgas34/about-us.png ./
 ```
 ⚠️ Public karne se koi bhi object access kar sakta hai — sirf static websites ya public files ke liye karo.
 
-### S3 ka use Data Processing & Analytics me
+## Data Processing & Analytics me S3 ka use
 
 S3 sirf file storage nahi — wo modern **data lake** ka foundation hai. Saari raw data S3 me aati hai, wahi pe process hoti hai, aur analytics services S3 se **directly** query karti hain — koi extra database setup nahi.
 
